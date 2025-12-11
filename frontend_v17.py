@@ -278,7 +278,6 @@ def delete_pdf(pdf_id: int):
 # PDF parsing
 # ──────────────────────────────────────────────────────────────────────────────
 
-# Helper regexes for delta-based HDFC parsing
 DATE_LINE_RE = re.compile(r"^\s*(\d{2}/\d{2}/\d{2}(?:\d{2})?|\d{2}/\d{2}/\d{4})\b")
 NUM_RE = re.compile(r"[\d,]+\.\d{2}")
 
@@ -294,7 +293,6 @@ def extract_pages_text(pdf_path: str, account_password: str = None) -> list:
                 for p in pdf.pages:
                     text_pages.append(p.extract_text() or "")
     except Exception as e:
-        # try without password if initial failed
         try:
             with pdfplumber.open(pdf_path) as pdf:
                 for p in pdf.pages:
@@ -312,10 +310,6 @@ def parse_amount_and_balance_from_line(line: str):
     return amount, closing
 
 def infer_types_by_delta(tx_records: list, opening_balance: float, tolerance: float = 0.6):
-    """
-    Infer Type for each tx_record using opening_balance and closing balances.
-    Returns list of dicts with inference_reason.
-    """
     recs = []
     prev_bal = opening_balance
     for t in tx_records:
@@ -324,7 +318,6 @@ def infer_types_by_delta(tx_records: list, opening_balance: float, tolerance: fl
         delta = round(new_bal - prev_bal, 2)
         reason = None
 
-        # If delta equals +amount -> credit, if delta equals -amount -> debit
         if abs(delta - amt) <= tolerance:
             typ = "CR"
             reason = "delta_matches_plus_amount"
@@ -332,7 +325,6 @@ def infer_types_by_delta(tx_records: list, opening_balance: float, tolerance: fl
             typ = "DR"
             reason = "delta_matches_minus_amount"
         else:
-            # fallback to textual tokens
             if re.search(r"\b(CR|NEFT CR|NEFTCR|CREDIT|DEPOSIT|REFUND|INTEREST)\b", t['Remarks'], flags=re.I):
                 typ = "CR"; reason = "text_credit_token"
             elif re.search(r"\b(ATW|POS|IMPS|UPI|WITHDRAWAL|ATM|DEBIT)\b", t['Remarks'], flags=re.I):
@@ -356,17 +348,12 @@ def infer_types_by_delta(tx_records: list, opening_balance: float, tolerance: fl
     return recs
 
 def _score_opening_for_records(opening, tx_records, tolerance=0.6, sample_size=6):
-    """
-    Runs infer_types_by_delta on a small sample and returns a score:
-    count of records where inference_reason indicates delta match.
-    """
     sample = tx_records[:min(sample_size, len(tx_records))]
     recs = infer_types_by_delta(sample, opening, tolerance=tolerance)
     score = sum(1 for r in recs if r.get("inference_reason", "").startswith("delta_matches"))
     return score
 
 def extract_statement_summary(full_text: str):
-    # Try to extract the opening balance & printed summary values (best-effort)
     opening = None
     printed_debits = None
     printed_credits = None
@@ -400,7 +387,6 @@ def extract_statement_summary(full_text: str):
         except Exception:
             pass
 
-    # HDFC sometimes lists "Debits" and "Credits" in a table - try to capture more generically
     m3 = re.search(r"Debits[:\s]*([\d,]+\.\d{2})\s+Credits[:\s]*([\d,]+\.\d{2})", full_text, flags=re.IGNORECASE)
     if m3:
         try:
@@ -415,19 +401,10 @@ def extract_statement_summary(full_text: str):
 
     return opening, printed_debits, printed_credits, printed_closing
 
-# parse_pdf_file now returns (rows_list, printed_totals_dict)
 def parse_pdf_file(filepath: str, account_password: str):
-    """
-    Updated parser:
-    - Returns tuple: (rows_list, printed_totals_dict)
-      printed_totals_dict: {"printed_credits": float or None, "printed_debits": float or None, "printed_closing": float or None}
-    - For HDFC-style statements it extracts printed totals from summary when possible.
-    - For other banks it falls back to legacy parser but still attempts to extract printed totals.
-    """
     try:
         pages = extract_pages_text(filepath, account_password)
     except Exception as e:
-        # original fallback to try opening without password
         try:
             pages = extract_pages_text(filepath, None)
         except Exception as e2:
@@ -439,7 +416,6 @@ def parse_pdf_file(filepath: str, account_password: str):
         st.warning(f"Could not extract text from {os.path.basename(filepath)}")
         return [], {"printed_credits": None, "printed_debits": None, "printed_closing": None, "opening_balance": None}
 
-    # Attempt to extract printed totals regardless (best-effort)
     opening_balance, printed_debits, printed_credits, printed_closing = extract_statement_summary(full_text)
     printed_totals = {
         "printed_credits": printed_credits,
@@ -448,9 +424,7 @@ def parse_pdf_file(filepath: str, account_password: str):
         "opening_balance": opening_balance
     }
 
-    # Quick check: if file appears HDFC-like (header has 'ClosingBalance' or 'StatementSummary'), prefer delta approach
     if ("ClosingBalance" in full_text or "STATEMENTSUMMARY" in full_text or "WithdrawalAmt." in full_text or "Debits" in full_text and "Credits" in full_text):
-        # Build transaction-like lines: lines starting with date token
         tx_lines = []
         for p_idx, pg in enumerate(pages, start=1):
             for ln in (pg.splitlines() if pg else []):
@@ -458,22 +432,17 @@ def parse_pdf_file(filepath: str, account_password: str):
                 if DATE_LINE_RE.match(ln_s):
                     tx_lines.append((p_idx, ln_s))
 
-        # If no tx_lines found, fallback to legacy parser
         if not tx_lines:
             rows = _legacy_parse_pdf_file_return_only_rows(filepath, account_password)
             return rows, printed_totals
 
-        # Build tx_records with amount & closing
         tx_records = []
         for idx, (page_num, raw_line) in enumerate(tx_lines):
             amt, closing = parse_amount_and_balance_from_line(raw_line)
             if closing is None:
-                # Could be a header/footer line; skip
                 continue
-            # date string
             date_match = DATE_LINE_RE.match(raw_line)
             date_str = date_match.group(1) if date_match else ""
-            # try parse date to datetime if possible (handle dd/mm/yy and dd/mm/yyyy)
             dt_val = None
             for fmt in ("%d/%m/%y", "%d/%m/%Y"):
                 try:
@@ -494,24 +463,16 @@ def parse_pdf_file(filepath: str, account_password: str):
             rows = _legacy_parse_pdf_file_return_only_rows(filepath, account_password)
             return rows, printed_totals
 
-        # If opening_balance not present, try to estimate robustly:
-        # Try both possible openings for first transaction:
-        # opening_a = first_closing + first_amount  (assumes first tx was debit)
-        # opening_b = first_closing - first_amount  (assumes first tx was credit)
         first = tx_records[0]
         first_closing = float(first['Balance'])
         first_amt = float(first['Amount'])
         candidate_openings = []
-        # Candidate A: assume first tx is debit -> opening = closing + amt
         candidate_openings.append(("debit_assumption", first_closing + first_amt))
-        # Candidate B: assume first tx is credit -> opening = closing - first_amt
         candidate_openings.append(("credit_assumption", first_closing - first_amt))
 
-        # if there is some externally extracted opening_balance, include as candidate
         if opening_balance is not None:
             candidate_openings.insert(0, ("extracted_opening", opening_balance))
 
-        # Score each candidate using first few records
         best_opening = None
         best_score = -1
         for name, op in candidate_openings:
@@ -523,14 +484,11 @@ def parse_pdf_file(filepath: str, account_password: str):
                 best_score = score
                 best_opening = op
 
-        # If none produced a positive score, fallback to debit_assumption
         if best_opening is None:
             best_opening = first_closing + first_amt
 
-        # Now infer full recs using best_opening
         recs = infer_types_by_delta(tx_records, best_opening, tolerance=0.6)
 
-        # Convert recs to expected output format
         out = []
         for r in recs:
             dt = r.get("Date")
@@ -553,16 +511,13 @@ def parse_pdf_file(filepath: str, account_password: str):
         return out, printed_totals
 
     else:
-        # If not HDFC-like, use legacy parser (keeps previous regex behavior for IDBI/Axis/ADCB)
         rows = _legacy_parse_pdf_file_return_only_rows(filepath, account_password)
         return rows, printed_totals
 
-# Helper wrapper: return only rows (used by parse_pdf_file to call legacy)
 def _legacy_parse_pdf_file_return_only_rows(filepath: str, account_password: str):
     rows = _legacy_parse_pdf_file(filepath, account_password)
     return rows
 
-# Original legacy parsing logic returns rows (kept mostly as-is; used as fallback)
 def _legacy_parse_pdf_file(filepath: str, account_password: str):
     text = ""
     try:
@@ -709,11 +664,6 @@ def _legacy_parse_pdf_file(filepath: str, account_password: str):
     return data
 
 def parse_many_pdfs(filepaths, account_password: str):
-    """
-    Now returns tuple: (all_rows_list, aggregated_printed_totals)
-    aggregated_printed_totals = {"printed_credits": sum or None, "printed_debits": sum or None}
-    If none of the files contain printed totals, values will be None.
-    """
     all_rows = []
     total_printed_credits = 0.0
     total_printed_debits = 0.0
@@ -722,7 +672,6 @@ def parse_many_pdfs(filepaths, account_password: str):
         rows, printed = parse_pdf_file(p, account_password)
         if rows:
             all_rows.extend(rows)
-        # printed could be None values
         pc = printed.get("printed_credits") if printed else None
         pd_ = printed.get("printed_debits") if printed else None
         if pc is not None:
@@ -800,9 +749,7 @@ if "categories" not in st.session_state:
 # Auth UI
 # ──────────────────────────────────────────────────────────────────────────────
 if not st.session_state.authenticated:
-    # Center the login/register form
     col1, col2, col3 = st.columns([1, 2, 1])
-    
     with col2:
         st.markdown("""
             <div style='text-align: center; padding: 20px;'>
@@ -810,15 +757,12 @@ if not st.session_state.authenticated:
                 <p style='color: #666; font-size: 16px;'>Analyze your bank statements with ease</p>
             </div>
         """, unsafe_allow_html=True)
-        
         auth_tab1, auth_tab2 = st.tabs(["🔑 Login", "📝 Register"])
-        
         with auth_tab1:
             st.markdown("<br>", unsafe_allow_html=True)
             log_user = st.text_input("Account Number", key="login_user", placeholder="Enter your account number")
             log_pass = st.text_input("Password", type="password", key="login_pass", placeholder="Enter your password")
             st.markdown("<br>", unsafe_allow_html=True)
-            
             if st.button("🚀 Login", use_container_width=True, type="primary"):
                 if not log_user or not log_pass:
                     st.warning("⚠️ Please enter both account number and password.")
@@ -832,13 +776,11 @@ if not st.session_state.authenticated:
                         st.rerun()
                     else:
                         st.error(f"❌ {msg}")
-        
         with auth_tab2:
             st.markdown("<br>", unsafe_allow_html=True)
             reg_user = st.text_input("Choose Account Number", key="reg_user", placeholder="Create your account number")
             reg_pass = st.text_input("Choose Password", type="password", key="reg_pass", placeholder="Create a strong password")
             st.markdown("<br>", unsafe_allow_html=True)
-            
             if st.button("✨ Create Account", use_container_width=True, type="primary"):
                 if not reg_user or not reg_pass:
                     st.warning("⚠️ Please enter both account number and password.")
@@ -855,8 +797,7 @@ if not st.session_state.authenticated:
 # ──────────────────────────────────────────────────────────────────────────────
 if st.session_state.authenticated:
     user = st.session_state.username
-    
-    # Header with user info and logout
+
     col1, col2 = st.columns([4, 1])
     with col1:
         st.title("💰 Bank Statement Analyzer")
@@ -871,12 +812,10 @@ if st.session_state.authenticated:
             st.session_state.authenticated = False
             st.session_state.username = ""
             st.rerun()
-    
+
     st.markdown("---")
-    
-    # ────────────────────────────────────────────────
-    # Sidebar - File Manager and Category Management
-    # ────────────────────────────────────────────────
+
+    # Sidebar
     saved_items = get_saved_pdfs(user)
     selected_paths = []
 
@@ -885,19 +824,15 @@ if st.session_state.authenticated:
 
     with st.sidebar:
         st.markdown("### 📂 File Manager")
-        
         if saved_items:
             st.markdown(f"**{len(saved_items)} file(s) in library**")
             st.markdown("<br>", unsafe_allow_html=True)
-            
             for i in saved_items:
                 with st.expander(f"📄 {st.session_state.pdf_names[i['id']]}", expanded=False):
                     upload_date = i['uploaded_at'].split('T')[0]
                     st.caption(f"📅 Uploaded: {upload_date}")
-                    
                     if st.checkbox("Select for analysis", key=f"chk_{i['id']}"):
                         selected_paths.append(i["filepath"])
-                    
                     key_name = f"rename_{i['id']}"
                     if key_name not in st.session_state:
                         st.session_state[key_name] = st.session_state.pdf_names[i['id']]
@@ -933,14 +868,12 @@ if st.session_state.authenticated:
                         st.rerun()
         else:
             st.info("📭 No PDFs in library yet.\n\nUpload some files to get started!")
-        
+
         st.markdown("---")
-        
-        # Category Explorer
+
         if "last_df" in st.session_state:
             st.markdown("### 🏷️ Category Explorer")
             df = st.session_state.last_df
-
             for cat in st.session_state.categories:
                 cat_df = df[df["Category"] == cat]
                 if not cat_df.empty:
@@ -966,7 +899,7 @@ if st.session_state.authenticated:
                     st.success(f"✅ Added '{new_kw}' to '{new_cat}'")
                 else:
                     st.warning("⚠️ Please enter both fields.")
-        
+
         st.markdown("---")
         st.markdown("""
             <div style='text-align: center; padding: 12px; background: rgba(33, 150, 243, 0.1); border-radius: 8px;'>
@@ -974,13 +907,9 @@ if st.session_state.authenticated:
                 <div style='font-size: 10px; color: #666; margin-top: 4px;'>Supported: HDFC • IDBI • Axis • ADCB</div>
             </div>
         """, unsafe_allow_html=True)
-    
-    # ────────────────────────────────────────────────
+
     # Main content area
-    
-    # Upload section with better styling
     st.markdown("### 📤 Upload Bank Statements")
-    
     col1, col2 = st.columns([3, 1])
     with col1:
         uploaded_files = st.file_uploader(
@@ -1011,8 +940,7 @@ if st.session_state.authenticated:
                 new_uploaded_paths = save_uploaded_files(user, unsaved_files)
                 for f in unsaved_files:
                     st.session_state.saved_file_names.add(f.name)
-            
-            # Success message with file list
+
             file_list = "\n".join([f"• {f.name}" for f in unsaved_files])
             st.success(f"""
                 ✅ **Successfully saved {len(new_uploaded_paths)} file(s)!**
@@ -1023,24 +951,31 @@ if st.session_state.authenticated:
             """)
             st.balloons()
 
-            # --- ADD AUTO REFRESH: force a rerun so the sidebar updates immediately ---
-            # This is the only addition: set a small session flag (optional) and call experimental_rerun
+            # --- Robust auto-refresh / rerun fallback (safe replacement) ---
             st.session_state["_just_uploaded"] = True
-            st.experimental_rerun()
-            # ---------------------------------------------------------------------
+            try:
+                if hasattr(st, "experimental_rerun"):
+                    st.experimental_rerun()
+                else:
+                    st.markdown("<script>window.location.reload()</script>", unsafe_allow_html=True)
+                    st.stop()
+            except Exception:
+                st.markdown("<script>window.location.reload()</script>", unsafe_allow_html=True)
+                st.stop()
+            # ------------------------------------------------------------
 
     if not selected_paths and new_uploaded_paths:
         selected_paths = new_uploaded_paths
 
     st.markdown("---")
-    
-    # Analysis section with better empty state
+
+    # Analysis section
     st.markdown("### 🔍 Analysis")
-    
-    # If we arrive here after upload+rerun, show a one-time banner and clear flag (optional)
+
+    # Show a one-time banner after upload+refresh
     if st.session_state.pop("_just_uploaded", False):
         st.success("✅ Upload processed — your file library has been updated.")
-    
+
     if not selected_paths and "last_df" not in st.session_state:
         st.info("""
             ### 👋 Welcome to Bank Statement Analyzer!
@@ -1053,7 +988,7 @@ if st.session_state.authenticated:
             
             Your financial insights are just a click away! 🚀
         """)
-    
+
     col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
         if selected_paths:
@@ -1061,7 +996,7 @@ if st.session_state.authenticated:
         elif "last_df" in st.session_state:
             st.info("💡 Select files from the sidebar to analyze")
     with col2:
-        pass  # Empty space
+        pass
     with col3:
         run_btn = st.button("▶️ Run Analysis", use_container_width=True, type="primary", disabled=(not selected_paths))
 
@@ -1071,63 +1006,55 @@ if st.session_state.authenticated:
         else:
             with st.spinner("🔄 Parsing statements... This may take a moment."):
                 rows, printed_totals = parse_many_pdfs(selected_paths, account_password=user)
-            
+
             if rows:
                 df = pd.DataFrame(rows)
 
-                # Use printed totals if available; otherwise fall back to computed totals
                 printed_credits = printed_totals.get("printed_credits")
                 printed_debits = printed_totals.get("printed_debits")
 
-                # Compute fallback totals
                 computed_credit = df[df["Type"] == "CR"]["Amount"].sum() if not df.empty else 0.0
                 computed_debit = df[df["Type"] == "DR"]["Amount"].sum() if not df.empty else 0.0
 
-                # Choose totals to display: prefer printed values when present
                 total_credit = float(printed_credits) if printed_credits is not None else float(computed_credit)
                 total_debit = float(printed_debits) if printed_debits is not None else float(computed_debit)
 
                 df["Category"] = df["Remarks"].apply(lambda r: detect_category(r, st.session_state.categories))
                 st.session_state.last_df = df
 
-                # Quick stats at the top
                 st.markdown("### 📈 Summary")
                 col1, col2, col3, col4 = st.columns(4)
-                
+
                 net_flow = total_credit - total_debit
                 transaction_count = len(df)
-                
+
                 with col1:
                     st.metric("💰 Total Credit", f"₹{total_credit:,.2f}", delta=None)
                 with col2:
                     st.metric("💸 Total Debit", f"₹{total_debit:,.2f}", delta=None)
                 with col3:
-                    delta_color = "normal" if net_flow >= 0 else "inverse"
                     st.metric("📊 Net Flow", f"₹{net_flow:,.2f}", delta=f"{'Positive' if net_flow >= 0 else 'Negative'}")
                 with col4:
                     st.metric("🧾 Transactions", f"{transaction_count:,}")
 
                 st.markdown("---")
 
-                # Detailed tabs
                 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-                    "📋 All Transactions", 
-                    "📂 By File", 
+                    "📋 All Transactions",
+                    "📂 By File",
                     "📆 Monthly Trends",
                     "📊 Category Analysis",
                     "🏆 Top Transactions"
                 ])
-                
+
                 with tab1:
                     st.markdown("#### Transaction History")
-                    
-                    # Search and Filters
                     col1, col2 = st.columns([2, 1])
                     with col1:
                         search_term = st.text_input("🔍 Search transactions", placeholder="Search by remarks...")
                     with col2:
-                        st.write("")  # Spacer
-                    
+                        st.write("")
+
                     col1, col2, col3 = st.columns(3)
                     with col1:
                         filter_type = st.selectbox("Transaction Type", ["All", "Credit", "Debit"])
@@ -1136,44 +1063,29 @@ if st.session_state.authenticated:
                         filter_category = st.selectbox("Category", categories_list)
                     with col3:
                         filter_file = st.selectbox("Source File", ["All"] + df["Source File"].unique().tolist())
-                    
-                    # Apply filters
+
                     filtered_df = df.copy()
-                    
-                    # Search filter
                     if search_term:
                         filtered_df = filtered_df[
                             filtered_df["Remarks"].str.contains(search_term, case=False, na=False)
                         ]
-                    
                     if filter_type != "All":
                         filtered_df = filtered_df[filtered_df["Type"] == ("CR" if filter_type == "Credit" else "DR")]
                     if filter_category != "All":
                         filtered_df = filtered_df[filtered_df["Category"] == filter_category]
                     if filter_file != "All":
                         filtered_df = filtered_df[filtered_df["Source File"] == filter_file]
-                    
-                    # -------------------------
-                    # Format display dataframe (robust)
-                    # -------------------------
+
                     display_df = filtered_df.copy()
-
-                    # Ensure Date is a datetime — safe conversion
                     display_df["Date"] = pd.to_datetime(display_df["Date"], errors="coerce")
-
-                    # If Date conversion succeeded, format as string; otherwise keep original
                     display_df["Date_display"] = display_df["Date"].dt.strftime("%d %b %Y")
                     display_df.loc[display_df["Date"].isna(), "Date_display"] = display_df.loc[display_df["Date"].isna(), "Date"].astype(str)
-
-                    # Keep the existing columns but use the safe Date_display
                     display_df = display_df.assign(Amount=display_df["Amount"].apply(lambda x: f"₹{x:,.2f}"))
                     display_df = display_df.sort_values("Date", ascending=False)
 
-                    # Show simple message if no records
                     if display_df.empty:
                         st.info("No transactions to show for the selected filters.")
                     else:
-                        # Use st.dataframe as primary; fallback to st.table if any issue
                         try:
                             st.dataframe(
                                 display_df[["Date_display", "Amount", "Type", "Category", "Remarks", "Source File"]],
@@ -1182,8 +1094,7 @@ if st.session_state.authenticated:
                             )
                         except Exception:
                             st.table(display_df[["Date_display", "Amount", "Type", "Category", "Remarks", "Source File"]].head(200))
-                    
-                    # Summary of filtered results
+
                     if len(filtered_df) > 0:
                         filtered_credit = filtered_df[filtered_df["Type"] == "CR"]["Amount"].sum()
                         filtered_debit = filtered_df[filtered_df["Type"] == "DR"]["Amount"].sum()
@@ -1196,7 +1107,7 @@ if st.session_state.authenticated:
                             st.caption(f"💸 Filtered Debit: ₹{filtered_debit:,.2f}")
                     else:
                         st.info("No transactions match your filters.")
-                
+
                 with tab2:
                     st.markdown("#### Summary by File")
                     file_summary = df.groupby("Source File").agg(
@@ -1205,128 +1116,56 @@ if st.session_state.authenticated:
                         Transactions=("Amount", "count")
                     )
                     file_summary["Net_Flow"] = file_summary["Total_Credit"] - file_summary["Total_Debit"]
-                    
-                    # Format for display
                     file_summary_display = file_summary.copy()
                     for col in ["Total_Credit", "Total_Debit", "Net_Flow"]:
                         file_summary_display[col] = file_summary_display[col].apply(lambda x: f"₹{x:,.2f}")
-                    
                     st.dataframe(file_summary_display, use_container_width=True)
-                    
-                    # Visual chart
                     fig = go.Figure()
-                    fig.add_trace(go.Bar(
-                        name='Credit',
-                        x=file_summary.index,
-                        y=file_summary['Total_Credit'],
-                        marker_color='#4CAF50'
-                    ))
-                    fig.add_trace(go.Bar(
-                        name='Debit',
-                        x=file_summary.index,
-                        y=file_summary['Total_Debit'],
-                        marker_color='#f44336'
-                    ))
-                    fig.update_layout(
-                        barmode='group',
-                        title="Credit vs Debit by File",
-                        xaxis_title="File",
-                        yaxis_title="Amount (₹)",
-                        height=400
-                    )
+                    fig.add_trace(go.Bar(name='Credit', x=file_summary.index, y=file_summary['Total_Credit'], marker_color='#4CAF50'))
+                    fig.add_trace(go.Bar(name='Debit', x=file_summary.index, y=file_summary['Total_Debit'], marker_color='#f44336'))
+                    fig.update_layout(barmode='group', title="Credit vs Debit by File", xaxis_title="File", yaxis_title="Amount (₹)", height=400)
                     st.plotly_chart(fig, use_container_width=True)
-                
+
                 with tab3:
                     st.markdown("#### Monthly Trends")
                     df["Month"] = df["Date"].dt.to_period("M")
                     monthly_summary = df.groupby(["Month", "Type"])["Amount"].sum().unstack(fill_value=0)
                     monthly_summary["Net"] = monthly_summary.get("CR", 0) - monthly_summary.get("DR", 0)
-                    
-                    # Display table
                     monthly_display = monthly_summary.copy()
                     monthly_display.index = monthly_display.index.astype(str)
                     for col in monthly_display.columns:
                         monthly_display[col] = monthly_display[col].apply(lambda x: f"₹{x:,.2f}")
                     st.dataframe(monthly_display, use_container_width=True)
-                    
-                    # Line chart
                     fig = go.Figure()
-                    fig.add_trace(go.Scatter(
-                        x=[str(idx) for idx in monthly_summary.index],
-                        y=monthly_summary.get("CR", [0]*len(monthly_summary)),
-                        name='Credit',
-                        line=dict(color='#4CAF50', width=3),
-                        mode='lines+markers'
-                    ))
-                    fig.add_trace(go.Scatter(
-                        x=[str(idx) for idx in monthly_summary.index],
-                        y=monthly_summary.get("DR", [0]*len(monthly_summary)),
-                        name='Debit',
-                        line=dict(color='#f44336', width=3),
-                        mode='lines+markers'
-                    ))
-                    fig.update_layout(
-                        title="Monthly Credit & Debit Trends",
-                        xaxis_title="Month",
-                        yaxis_title="Amount (₹)",
-                        height=400,
-                        hovermode='x unified'
-                    )
+                    fig.add_trace(go.Scatter(x=[str(idx) for idx in monthly_summary.index], y=monthly_summary.get("CR", [0]*len(monthly_summary)), name='Credit', line=dict(color='#4CAF50', width=3), mode='lines+markers'))
+                    fig.add_trace(go.Scatter(x=[str(idx) for idx in monthly_summary.index], y=monthly_summary.get("DR", [0]*len(monthly_summary)), name='Debit', line=dict(color='#f44336', width=3), mode='lines+markers'))
+                    fig.update_layout(title="Monthly Credit & Debit Trends", xaxis_title="Month", yaxis_title="Amount (₹)", height=400, hovermode='x unified')
                     st.plotly_chart(fig, use_container_width=True)
-                
+
                 with tab4:
                     st.markdown("#### Spending by Category")
-                    
-                    # Category breakdown
-                    category_summary = df.groupby("Category").agg(
-                        Total=("Amount", "sum"),
-                        Count=("Amount", "count")
-                    ).sort_values("Total", ascending=False)
-                    
+                    category_summary = df.groupby("Category").agg(Total=("Amount", "sum"), Count=("Amount", "count")).sort_values("Total", ascending=False)
                     col1, col2 = st.columns(2)
-                    
                     with col1:
-                        # Pie chart
-                        fig = px.pie(
-                            values=category_summary["Total"],
-                            names=category_summary.index,
-                            title="Spending Distribution by Category",
-                            hole=0.4
-                        )
+                        fig = px.pie(values=category_summary["Total"], names=category_summary.index, title="Spending Distribution by Category", hole=0.4)
                         fig.update_traces(textposition='inside', textinfo='percent+label')
                         st.plotly_chart(fig, use_container_width=True)
-                    
                     with col2:
-                        # Bar chart
-                        fig = px.bar(
-                            category_summary.reset_index(),
-                            x="Category",
-                            y="Total",
-                            title="Total Amount by Category",
-                            color="Total",
-                            color_continuous_scale="Viridis"
-                        )
+                        fig = px.bar(category_summary.reset_index(), x="Category", y="Total", title="Total Amount by Category", color="Total", color_continuous_scale="Viridis")
                         fig.update_layout(xaxis_tickangle=-45, height=400)
                         st.plotly_chart(fig, use_container_width=True)
-                    
-                    # Detailed category table
                     st.markdown("##### Category Details")
                     category_display = category_summary.copy()
                     category_display["Total"] = category_display["Total"].apply(lambda x: f"₹{x:,.2f}")
-                    category_display["Avg_Per_Transaction"] = (
-                        category_summary["Total"] / category_summary["Count"]
-                    ).apply(lambda x: f"₹{x:,.2f}")
+                    category_display["Avg_Per_Transaction"] = (category_summary["Total"] / category_summary["Count"]).apply(lambda x: f"₹{x:,.2f}")
                     st.dataframe(category_display, use_container_width=True)
-                
+
                 with tab5:
                     st.markdown("#### Top 5 Largest Transactions")
                     top5 = df.nlargest(5, "Amount")
-                    
                     for idx, row in top5.iterrows():
-                        # Create a card-like appearance for each transaction
                         bg_color = "rgba(76, 175, 80, 0.1)" if row['Type'] == "CR" else "rgba(244, 67, 54, 0.1)"
                         border_color = "#4CAF50" if row['Type'] == "CR" else "#f44336"
-                        
                         st.markdown(f"""
                         <div style='
                             background-color: {bg_color};
@@ -1356,8 +1195,6 @@ if st.session_state.authenticated:
                         """, unsafe_allow_html=True)
 
                 st.markdown("---")
-                
-                # Download section
                 col1, col2, col3 = st.columns([1, 2, 1])
                 with col2:
                     st.download_button(
@@ -1369,8 +1206,7 @@ if st.session_state.authenticated:
                     )
             else:
                 st.error("❌ No valid transactions found. Please check your PDF format.")
-    
-    # Show helpful message when no files selected
+
     elif not selected_paths and "last_df" not in st.session_state:
         st.markdown("""
             <div style='text-align: center; padding: 60px 20px; background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(33, 150, 243, 0.1) 100%); border-radius: 12px; margin-top: 30px;'>
@@ -1395,7 +1231,6 @@ if st.session_state.authenticated:
                 </div>
             </div>
         """, unsafe_allow_html=True)
-    
-    # Show previous analysis if available but no new files selected
+
     elif "last_df" in st.session_state:
         st.info("💡 Your previous analysis is shown below. Select files from the sidebar and click 'Run Analysis' to update.")
