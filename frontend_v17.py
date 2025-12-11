@@ -504,7 +504,7 @@ def parse_pdf_file(filepath: str, account_password: str):
         candidate_openings = []
         # Candidate A: assume first tx is debit -> opening = closing + amt
         candidate_openings.append(("debit_assumption", first_closing + first_amt))
-        # Candidate B: assume first tx is credit -> opening = closing - amt
+        # Candidate B: assume first tx is credit -> opening = closing - first_amt
         candidate_openings.append(("credit_assumption", first_closing - first_amt))
 
         # if there is some externally extracted opening_balance, include as candidate
@@ -975,7 +975,7 @@ if st.session_state.authenticated:
             </div>
         """, unsafe_allow_html=True)
     
-    # ────────────────────────────────────────────────────────────────
+    # ────────────────────────────────────────────────
     # Main content area
     
     # Upload section with better styling
@@ -1023,6 +1023,12 @@ if st.session_state.authenticated:
             """)
             st.balloons()
 
+            # --- ADD AUTO REFRESH: force a rerun so the sidebar updates immediately ---
+            # This is the only addition: set a small session flag (optional) and call experimental_rerun
+            st.session_state["_just_uploaded"] = True
+            st.experimental_rerun()
+            # ---------------------------------------------------------------------
+
     if not selected_paths and new_uploaded_paths:
         selected_paths = new_uploaded_paths
 
@@ -1030,6 +1036,10 @@ if st.session_state.authenticated:
     
     # Analysis section with better empty state
     st.markdown("### 🔍 Analysis")
+    
+    # If we arrive here after upload+rerun, show a one-time banner and clear flag (optional)
+    if st.session_state.pop("_just_uploaded", False):
+        st.success("✅ Upload processed — your file library has been updated.")
     
     if not selected_paths and "last_df" not in st.session_state:
         st.info("""
