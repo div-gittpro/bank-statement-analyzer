@@ -1389,5 +1389,5 @@ if st.session_state.authenticated:
     
     # Show previous analysis if available but no new files selected
     elif "last_df" in st.session_state:
-        st.info("💡 Your previous analysis is shown below. Select files from the sidebar and click 'Run Analysis' to update.") add auto refresh after uploading a pdf without changing any other thing in the code
+        st.info("💡 Your previous analysis is shown below. Select files from the sidebar and click 'Run Analysis' to update.") 
 
