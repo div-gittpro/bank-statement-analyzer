@@ -885,7 +885,7 @@ if st.session_state.authenticated:
 
     with st.sidebar:
         st.markdown("### 📂 File Manager")
-        
+        st.rerun()
         if saved_items:
             st.markdown(f"**{len(saved_items)} file(s) in library**")
             st.markdown("<br>", unsafe_allow_html=True)
@@ -1391,6 +1391,7 @@ if st.session_state.authenticated:
     # Show previous analysis if available but no new files selected
     elif "last_df" in st.session_state:
         st.info("💡 Your previous analysis is shown below. Select files from the sidebar and click 'Run Analysis' to update.") 
+
 
 
 
