@@ -21,6 +21,23 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# Small helper to do a robust rerun / reload
+def safe_rerun():
+    """
+    Try to use Streamlit's experimental rerun. If unavailable or it raises,
+    fall back to a client-side full page reload via JS and then stop execution.
+    """
+    try:
+        # prefer Streamlit's rerun if available
+        if hasattr(st, "experimental_rerun"):
+            st.experimental_rerun()
+        else:
+            st.markdown("<script>window.location.reload()</script>", unsafe_allow_html=True)
+            st.stop()
+    except Exception:
+        st.markdown("<script>window.location.reload()</script>", unsafe_allow_html=True)
+        st.stop()
+
 # Custom CSS for better UI
 st.markdown("""
     <style>
@@ -168,7 +185,7 @@ st.markdown("""
 # ──────────────────────────────────────────────────────────────────────────────
 # Setup
 # ──────────────────────────────────────────────────────────────────────────────
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else os.getcwd()
 DATA_DIR = os.path.join(BASE_DIR, "user_data")
 UPLOAD_ROOT = os.path.join(DATA_DIR, "uploads")
 DB_PATH = os.path.join(DATA_DIR, "bank_app.db")
@@ -230,6 +247,9 @@ def login_user_db(account_number: str, password: str):
     return True, "Login successful!"
 
 def save_uploaded_files(account_number: str, files):
+    """
+    Save uploaded files to disk and register in sqlite. Return list of saved file paths.
+    """
     user_dir = os.path.join(UPLOAD_ROOT, account_number)
     os.makedirs(user_dir, exist_ok=True)
     saved_paths = []
@@ -292,7 +312,7 @@ def extract_pages_text(pdf_path: str, account_password: str = None) -> list:
             with pdfplumber.open(pdf_path) as pdf:
                 for p in pdf.pages:
                     text_pages.append(p.extract_text() or "")
-    except Exception as e:
+    except Exception:
         try:
             with pdfplumber.open(pdf_path) as pdf:
                 for p in pdf.pages:
@@ -404,7 +424,7 @@ def extract_statement_summary(full_text: str):
 def parse_pdf_file(filepath: str, account_password: str):
     try:
         pages = extract_pages_text(filepath, account_password)
-    except Exception as e:
+    except Exception:
         try:
             pages = extract_pages_text(filepath, None)
         except Exception as e2:
@@ -527,7 +547,7 @@ def _legacy_parse_pdf_file(filepath: str, account_password: str):
         else:
             with pdfplumber.open(filepath) as pdf:
                 text = "\n".join([page.extract_text() or "" for page in pdf.pages])
-    except Exception as e:
+    except Exception:
         try:
             with pdfplumber.open(filepath) as pdf:
                 text = "\n".join([page.extract_text() or "" for page in pdf.pages])
@@ -715,24 +735,20 @@ def detect_category(remarks: str, categories):
     text = str(remarks).lower()
     if not text.strip():
         return "Misc"
-
     for cat in categories:
         kws = DEFAULT_CATEGORY_KEYWORDS.get(cat, [])
         for kw in kws:
             if kw in text:
                 return cat
-
     words = text.split()
     for word in words:
         for cat, kws in DEFAULT_CATEGORY_KEYWORDS.items():
             match = get_close_matches(word, kws, n=1, cutoff=0.8)
             if match:
                 return cat
-
     for cat in categories:
         if cat.lower() in text:
             return cat
-
     return "Misc"
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -773,7 +789,7 @@ if not st.session_state.authenticated:
                         st.session_state.username = log_user.strip()
                         st.success(f"✅ {msg}")
                         st.balloons()
-                        st.rerun()
+                        safe_rerun()
                     else:
                         st.error(f"❌ {msg}")
         with auth_tab2:
@@ -798,6 +814,7 @@ if not st.session_state.authenticated:
 if st.session_state.authenticated:
     user = st.session_state.username
 
+    # Header with user info and logout
     col1, col2 = st.columns([4, 1])
     with col1:
         st.title("💰 Bank Statement Analyzer")
@@ -811,11 +828,13 @@ if st.session_state.authenticated:
         if st.button("🚪 Logout", use_container_width=True, key="header_logout"):
             st.session_state.authenticated = False
             st.session_state.username = ""
-            st.rerun()
+            safe_rerun()
 
     st.markdown("---")
 
-    # Sidebar
+    # ────────────────────────────────────────────────
+    # Sidebar - File Manager and Category Management
+    # ────────────────────────────────────────────────
     saved_items = get_saved_pdfs(user)
     selected_paths = []
 
@@ -828,18 +847,22 @@ if st.session_state.authenticated:
             st.markdown(f"**{len(saved_items)} file(s) in library**")
             st.markdown("<br>", unsafe_allow_html=True)
             for i in saved_items:
-                with st.expander(f"📄 {st.session_state.pdf_names[i['id']]}", expanded=False):
+                # guard if pdf_names doesn't contain id (fresh user)
+                display_name = st.session_state.pdf_names.get(i['id'], i['filename'])
+                with st.expander(f"📄 {display_name}", expanded=False):
                     upload_date = i['uploaded_at'].split('T')[0]
                     st.caption(f"📅 Uploaded: {upload_date}")
+
                     if st.checkbox("Select for analysis", key=f"chk_{i['id']}"):
                         selected_paths.append(i["filepath"])
+
                     key_name = f"rename_{i['id']}"
                     if key_name not in st.session_state:
-                        st.session_state[key_name] = st.session_state.pdf_names[i['id']]
+                        st.session_state[key_name] = display_name
 
                     def rename_callback(file_id=i['id'], key_name=key_name):
                         new_name = st.session_state[key_name].strip()
-                        if new_name and new_name != st.session_state.pdf_names[file_id]:
+                        if new_name and new_name != st.session_state.pdf_names.get(file_id, None):
                             st.session_state.pdf_names[file_id] = new_name
                             conn = get_db()
                             cur = conn.cursor()
@@ -851,37 +874,40 @@ if st.session_state.authenticated:
                                 st.session_state.last_df.loc[
                                     st.session_state.last_df["Source File"] == old_name, "Source File"
                                 ] = new_name
+                            safe_rerun()
 
                     st.text_input(
                         "Rename file",
-                        value=st.session_state.pdf_names[i['id']],
+                        value=st.session_state[key_name],
                         key=key_name,
                         on_change=rename_callback
                     )
 
                     if st.button("🗑️ Delete", key=f"del_{i['id']}", use_container_width=True):
                         delete_pdf(i['id'])
-                        st.success(f"✅ Deleted {st.session_state.pdf_names[i['id']]}")
+                        st.success(f"✅ Deleted {display_name}")
                         st.session_state.pdf_names.pop(i['id'], None)
                         if key_name in st.session_state:
                             st.session_state.pop(key_name)
-                        st.rerun()
+                        safe_rerun()
         else:
             st.info("📭 No PDFs in library yet.\n\nUpload some files to get started!")
 
         st.markdown("---")
 
+        # Category Explorer
         if "last_df" in st.session_state:
             st.markdown("### 🏷️ Category Explorer")
             df = st.session_state.last_df
+
             for cat in st.session_state.categories:
                 cat_df = df[df["Category"] == cat]
                 if not cat_df.empty:
                     total_amt = cat_df["Amount"].sum()
                     with st.expander(f"{cat} • ₹{total_amt:,.0f} ({len(cat_df)})", expanded=False):
                         st.dataframe(
-                            cat_df[["Date", "Amount", "Type", "Remarks"]].head(10), 
-                            use_container_width=True, 
+                            cat_df[["Date", "Amount", "Type", "Remarks"]].head(10),
+                            use_container_width=True,
                             height=200
                         )
                         if len(cat_df) > 10:
@@ -908,8 +934,12 @@ if st.session_state.authenticated:
             </div>
         """, unsafe_allow_html=True)
 
+    # ────────────────────────────────────────────────────────────────
     # Main content area
+
+    # Upload section with better styling
     st.markdown("### 📤 Upload Bank Statements")
+
     col1, col2 = st.columns([3, 1])
     with col1:
         uploaded_files = st.file_uploader(
@@ -932,8 +962,11 @@ if st.session_state.authenticated:
 
     new_uploaded_paths = []
     if uploaded_files:
+        # initialize saved_file_names if not present
         if "saved_file_names" not in st.session_state:
             st.session_state.saved_file_names = set()
+
+        # filter out files already saved in this session by name
         unsaved_files = [f for f in uploaded_files if f.name not in st.session_state.saved_file_names]
         if unsaved_files:
             with st.spinner("💾 Saving files to your library..."):
@@ -951,28 +984,21 @@ if st.session_state.authenticated:
             """)
             st.balloons()
 
-            # --- Robust auto-refresh / rerun fallback (safe replacement) ---
+            # mark that we just uploaded so we can show a one-time banner after refresh
             st.session_state["_just_uploaded"] = True
-            try:
-                if hasattr(st, "experimental_rerun"):
-                    st.experimental_rerun()
-                else:
-                    st.markdown("<script>window.location.reload()</script>", unsafe_allow_html=True)
-                    st.stop()
-            except Exception:
-                st.markdown("<script>window.location.reload()</script>", unsafe_allow_html=True)
-                st.stop()
-            # ------------------------------------------------------------
+
+            # perform robust refresh (this will reload the page or ask streamlit to rerun)
+            safe_rerun()
 
     if not selected_paths and new_uploaded_paths:
         selected_paths = new_uploaded_paths
 
     st.markdown("---")
 
-    # Analysis section
+    # Analysis section with better empty state
     st.markdown("### 🔍 Analysis")
 
-    # Show a one-time banner after upload+refresh
+    # Show a one-time banner after upload+refresh (pop so shows once)
     if st.session_state.pop("_just_uploaded", False):
         st.success("✅ Upload processed — your file library has been updated.")
 
@@ -996,7 +1022,7 @@ if st.session_state.authenticated:
         elif "last_df" in st.session_state:
             st.info("💡 Select files from the sidebar to analyze")
     with col2:
-        pass
+        pass  # Empty space
     with col3:
         run_btn = st.button("▶️ Run Analysis", use_container_width=True, type="primary", disabled=(not selected_paths))
 
@@ -1010,18 +1036,22 @@ if st.session_state.authenticated:
             if rows:
                 df = pd.DataFrame(rows)
 
+                # Use printed totals if available; otherwise fall back to computed totals
                 printed_credits = printed_totals.get("printed_credits")
                 printed_debits = printed_totals.get("printed_debits")
 
+                # Compute fallback totals
                 computed_credit = df[df["Type"] == "CR"]["Amount"].sum() if not df.empty else 0.0
                 computed_debit = df[df["Type"] == "DR"]["Amount"].sum() if not df.empty else 0.0
 
+                # Choose totals to display: prefer printed values when present
                 total_credit = float(printed_credits) if printed_credits is not None else float(computed_credit)
                 total_debit = float(printed_debits) if printed_debits is not None else float(computed_debit)
 
                 df["Category"] = df["Remarks"].apply(lambda r: detect_category(r, st.session_state.categories))
                 st.session_state.last_df = df
 
+                # Quick stats at the top
                 st.markdown("### 📈 Summary")
                 col1, col2, col3, col4 = st.columns(4)
 
@@ -1039,6 +1069,7 @@ if st.session_state.authenticated:
 
                 st.markdown("---")
 
+                # Detailed tabs
                 tab1, tab2, tab3, tab4, tab5 = st.tabs([
                     "📋 All Transactions",
                     "📂 By File",
@@ -1053,7 +1084,7 @@ if st.session_state.authenticated:
                     with col1:
                         search_term = st.text_input("🔍 Search transactions", placeholder="Search by remarks...")
                     with col2:
-                        st.write("")
+                        st.write("")  # Spacer
 
                     col1, col2, col3 = st.columns(3)
                     with col1:
@@ -1207,6 +1238,7 @@ if st.session_state.authenticated:
             else:
                 st.error("❌ No valid transactions found. Please check your PDF format.")
 
+    # Show helpful message when no files selected
     elif not selected_paths and "last_df" not in st.session_state:
         st.markdown("""
             <div style='text-align: center; padding: 60px 20px; background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(33, 150, 243, 0.1) 100%); border-radius: 12px; margin-top: 30px;'>
@@ -1232,5 +1264,6 @@ if st.session_state.authenticated:
             </div>
         """, unsafe_allow_html=True)
 
+    # Show previous analysis if available but no new files selected
     elif "last_df" in st.session_state:
         st.info("💡 Your previous analysis is shown below. Select files from the sidebar and click 'Run Analysis' to update.")
