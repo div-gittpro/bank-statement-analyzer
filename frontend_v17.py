@@ -1022,7 +1022,7 @@ if st.session_state.authenticated:
                 👉 Files are now available in the File Manager (left sidebar)
             """)
             st.balloons()
-    st.rerun()
+   
 
     if not selected_paths and new_uploaded_paths:
         selected_paths = new_uploaded_paths
@@ -1390,5 +1390,6 @@ if st.session_state.authenticated:
     # Show previous analysis if available but no new files selected
     elif "last_df" in st.session_state:
         st.info("💡 Your previous analysis is shown below. Select files from the sidebar and click 'Run Analysis' to update.") 
+
 
 
