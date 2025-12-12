@@ -1111,34 +1111,105 @@ if not st.session_state.authenticated:
         <script>
         // Enhanced function to create glass cube around ALL content
         function createGlassCube() {
-            // Find the middle column container
-            let targetContainer = null;
+            // First, try to find and style the glass-cube-wrapper
+            let targetContainer = document.querySelector('.glass-cube-wrapper');
             
-            // Method 1: Find column container
-            const columnContainer = document.querySelector('.main .block-container > div[data-testid="column-container"]');
-            if (columnContainer) {
-                const cols = columnContainer.children;
-                if (cols.length >= 2) {
-                    targetContainer = cols[1]; // Middle column
+            // If wrapper exists, style it
+            if (targetContainer && !targetContainer.classList.contains('glass-cube-applied')) {
+                targetContainer.classList.add('glass-cube-applied');
+                Object.assign(targetContainer.style, {
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    borderRadius: '20px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(255, 255, 255, 0.05)',
+                    padding: '2rem 2rem',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    margin: '0',
+                    width: '100%',
+                    boxSizing: 'border-box'
+                });
+                
+                // Add animated backgrounds
+                let bgBefore = targetContainer.querySelector('.glass-bg-before');
+                let bgAfter = targetContainer.querySelector('.glass-bg-after');
+                
+                if (!bgBefore) {
+                    bgBefore = document.createElement('div');
+                    bgBefore.className = 'glass-bg-before';
+                    Object.assign(bgBefore.style, {
+                        position: 'absolute',
+                        top: '-50%',
+                        left: '-50%',
+                        width: '200%',
+                        height: '200%',
+                        background: 'radial-gradient(circle, rgba(0, 255, 200, 0.1) 0%, transparent 70%)',
+                        animation: 'rotate 20s linear infinite',
+                        pointerEvents: 'none',
+                        zIndex: '0'
+                    });
+                    targetContainer.insertBefore(bgBefore, targetContainer.firstChild);
                 }
+                
+                if (!bgAfter) {
+                    bgAfter = document.createElement('div');
+                    bgAfter.className = 'glass-bg-after';
+                    Object.assign(bgAfter.style, {
+                        position: 'absolute',
+                        top: '-30%',
+                        right: '-30%',
+                        width: '150%',
+                        height: '150%',
+                        background: 'radial-gradient(circle, rgba(0, 200, 255, 0.1) 0%, transparent 70%)',
+                        animation: 'rotate 15s linear infinite reverse',
+                        pointerEvents: 'none',
+                        zIndex: '0'
+                    });
+                    targetContainer.appendChild(bgAfter);
+                }
+                
+                // Ensure all content is above backgrounds
+                Array.from(targetContainer.children).forEach(child => {
+                    if (child !== bgBefore && child !== bgAfter) {
+                        if (child.style) {
+                            child.style.position = 'relative';
+                            child.style.zIndex = '1';
+                        }
+                    }
+                });
+                return; // Exit early if wrapper was found and styled
             }
             
-            // Method 2: Find by structure
+            // Fallback: Find the middle column container if wrapper not found
             if (!targetContainer) {
-                const blockContainer = document.querySelector('.main .block-container');
-                if (blockContainer) {
-                    const row = blockContainer.querySelector('div[data-testid="column-container"]') || blockContainer.children[0];
-                    if (row && row.children.length >= 2) {
-                        targetContainer = row.children[1];
+                // Method 1: Find column container
+                const columnContainer = document.querySelector('.main .block-container > div[data-testid="column-container"]');
+                if (columnContainer) {
+                    const cols = columnContainer.children;
+                    if (cols.length >= 2) {
+                        targetContainer = cols[1]; // Middle column
                     }
                 }
-            }
-            
-            // Method 3: Find by content
-            if (!targetContainer) {
-                const tabs = document.querySelector('.stTabs');
-                if (tabs) {
-                    targetContainer = tabs.closest('div[data-testid="column"]') || tabs.parentElement.parentElement;
+                
+                // Method 2: Find by structure
+                if (!targetContainer) {
+                    const blockContainer = document.querySelector('.main .block-container');
+                    if (blockContainer) {
+                        const row = blockContainer.querySelector('div[data-testid="column-container"]') || blockContainer.children[0];
+                        if (row && row.children.length >= 2) {
+                            targetContainer = row.children[1];
+                        }
+                    }
+                }
+                
+                // Method 3: Find by content
+                if (!targetContainer) {
+                    const tabs = document.querySelector('.stTabs');
+                    if (tabs) {
+                        targetContainer = tabs.closest('div[data-testid="column"]') || tabs.parentElement.parentElement;
+                    }
                 }
             }
             
@@ -1266,11 +1337,13 @@ if not st.session_state.authenticated:
     col1, col2, col3 = st.columns([1, 1, 1])
     
     with col2:
-        # Add header first
+        # Glass cube wrapper - will be styled by JavaScript
         st.markdown("""
-            <div class="auth-header">
-                <h1>Welcome back</h1>
-                <p>Sign in to your account</p>
+            <div class="glass-cube-wrapper">
+                <div class="auth-content">
+                    <div class="auth-header">
+                        <h1>Welcome back</h1>
+                        <p>Sign in to your account</p>
             </div>
         """, unsafe_allow_html=True)
         
@@ -1340,6 +1413,11 @@ if not st.session_state.authenticated:
                     Already have an account? Switch to the Login tab above
                 </div>
             """, unsafe_allow_html=True)
+        
+        st.markdown("""
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Main App
