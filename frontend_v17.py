@@ -1001,6 +1001,20 @@ if st.session_state.authenticated:
             </div>
         """, unsafe_allow_html=True)
 
+    # Show success message if files were just uploaded (persists after rerun)
+    if "just_uploaded_files" in st.session_state and st.session_state.just_uploaded_files:
+        file_list = "\n".join([f"• {fname}" for fname in st.session_state.just_uploaded_files])
+        st.success(f"""
+            ✅ **Successfully saved {len(st.session_state.just_uploaded_files)} file(s)!**
+            
+            {file_list}
+            
+            👉 Files are now available in the File Manager (left sidebar)
+        """)
+        st.balloons()
+        # Clear the flag after showing the message
+        st.session_state.just_uploaded_files = None
+
     new_uploaded_paths = []
     if uploaded_files:
         if "saved_file_names" not in st.session_state:
@@ -1012,17 +1026,10 @@ if st.session_state.authenticated:
                 for f in unsaved_files:
                     st.session_state.saved_file_names.add(f.name)
             
-            # Success message with file list
-            file_list = "\n".join([f"• {f.name}" for f in unsaved_files])
-            st.success(f"""
-                ✅ **Successfully saved {len(new_uploaded_paths)} file(s)!**
-                
-                {file_list}
-                
-                👉 Files are now available in the File Manager (left sidebar)
-            """)
-        
-            st.balloons()
+            # Store uploaded file names in session state for display after rerun
+            st.session_state.just_uploaded_files = [f.name for f in unsaved_files]
+            # Refresh the page to show uploaded PDFs in sidebar automatically
+            st.rerun()
    
 
     if not selected_paths and new_uploaded_paths:
@@ -1391,9 +1398,3 @@ if st.session_state.authenticated:
     # Show previous analysis if available but no new files selected
     elif "last_df" in st.session_state:
         st.info("💡 Your previous analysis is shown below. Select files from the sidebar and click 'Run Analysis' to update.") 
-
-
-
-
-
-
