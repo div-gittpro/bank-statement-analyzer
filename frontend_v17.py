@@ -806,14 +806,14 @@ if not st.session_state.authenticated:
         .stApp {
             background: #0a0a0a;
             background-image: 
-                radial-gradient(circle at 20% 20%, rgba(0, 255, 200, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(0, 200, 255, 0.15) 0%, transparent 50%);
+                radial-gradient(circle at 20% 20%, rgba(0, 255, 200, 0.2) 0%, transparent 60%),
+                radial-gradient(circle at 80% 20%, rgba(0, 200, 255, 0.2) 0%, transparent 60%);
             background-attachment: fixed;
         }
         .main .block-container {
-            padding-top: 2rem;
-            padding-bottom: 2rem;
-            max-width: 450px;
+            padding-top: 3rem;
+            padding-bottom: 3rem;
+            max-width: 480px;
         }
         /* Ensure the column container forms a complete glass cube */
         .main .block-container > div[data-testid="column-container"] {
@@ -881,98 +881,101 @@ if not st.session_state.authenticated:
         }
         .auth-header {
             text-align: left;
-            margin-bottom: 1.5rem;
+            margin-bottom: 2rem;
         }
         .auth-header h1 {
-            font-size: 1.75rem;
+            font-size: 2rem;
             font-weight: 600;
             color: #ffffff;
-            margin-bottom: 0.25rem;
-            letter-spacing: -0.5px;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.3px;
+            line-height: 1.2;
         }
         .auth-header p {
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 0.875rem;
+            color: rgba(255, 255, 255, 0.65);
+            font-size: 0.95rem;
             font-weight: 400;
             margin: 0;
+            line-height: 1.4;
         }
         .stTabs [data-baseweb="tab-list"] {
             gap: 0;
             background: transparent;
             border-radius: 0;
             padding: 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            margin-bottom: 2rem;
         }
         .stTabs [data-baseweb="tab"] {
             border-radius: 0;
-            padding: 0.75rem 0;
+            padding: 0.875rem 0;
             font-weight: 500;
             transition: all 0.3s ease;
             color: rgba(255, 255, 255, 0.5);
             background: transparent;
             border-bottom: 2px solid transparent;
-            margin-right: 2rem;
-            font-size: 0.9rem;
+            margin-right: 2.5rem;
+            font-size: 0.95rem;
         }
         .stTabs [aria-selected="true"] {
             color: #ffffff;
-            border-bottom-color: #00ffc8;
+            border-bottom-color: #ff6b6b;
             background: transparent;
+            font-weight: 600;
         }
         .stTabs [aria-selected="false"]:hover {
             color: rgba(255, 255, 255, 0.8);
         }
         .stTextInput {
-            margin-bottom: 1rem;
+            margin-bottom: 1.25rem;
         }
         .stTextInput>div>div>input {
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 0.75rem 1rem;
-            font-size: 0.9rem;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 0.875rem 1.25rem;
+            font-size: 0.95rem;
             transition: all 0.3s ease;
-            background-color: rgba(255, 255, 255, 0.05);
+            background-color: rgba(255, 255, 255, 0.04);
             color: #ffffff;
         }
         .stTextInput>div>div>input::placeholder {
-            color: rgba(255, 255, 255, 0.4);
+            color: rgba(255, 255, 255, 0.35);
         }
         .stTextInput>div>div>input:focus {
-            border-color: rgba(0, 255, 200, 0.5);
-            box-shadow: 0 0 0 3px rgba(0, 255, 200, 0.1);
-            background-color: rgba(255, 255, 255, 0.08);
+            border-color: rgba(0, 255, 200, 0.4);
+            box-shadow: 0 0 0 3px rgba(0, 255, 200, 0.08);
+            background-color: rgba(255, 255, 255, 0.06);
             outline: none;
         }
         .stTextInput>div>div>input:hover {
-            border-color: rgba(255, 255, 255, 0.2);
-            background-color: rgba(255, 255, 255, 0.07);
+            border-color: rgba(255, 255, 255, 0.15);
+            background-color: rgba(255, 255, 255, 0.05);
         }
         .stTextInput label {
             font-weight: 500;
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 0.85rem;
-            margin-bottom: 0.4rem;
+            color: rgba(255, 255, 255, 0.95);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
         }
         .stButton {
-            margin-top: 0.5rem;
+            margin-top: 0.75rem;
         }
         .stButton>button {
-            background: #00ffc8;
+            background: linear-gradient(135deg, #00d4ff 0%, #00ffc8 100%);
             color: #0a0a0a;
             border: none;
-            border-radius: 12px;
-            padding: 0.75rem 2rem;
+            border-radius: 14px;
+            padding: 0.875rem 2rem;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 20px rgba(0, 255, 200, 0.3);
+            box-shadow: 0 4px 20px rgba(0, 255, 200, 0.25);
             width: 100%;
         }
         .stButton>button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 30px rgba(0, 255, 200, 0.4);
-            background: #00e6b8;
+            box-shadow: 0 6px 30px rgba(0, 255, 200, 0.35);
+            background: linear-gradient(135deg, #00c4ef 0%, #00e6b8 100%);
         }
         .auth-link {
             text-align: center;
@@ -1001,45 +1004,45 @@ if not st.session_state.authenticated:
         [data-testid="stVerticalBlock"] > [style*="flex-direction: column"] > [data-testid="stVerticalBlock"] {
             gap: 0.5rem;
         }
-        /* Glass cube wrapper - will be applied via JavaScript */
+        /* Glass cube wrapper - matches Dribbble design exactly */
         .glass-cube-wrapper {
-            background: rgba(255, 255, 255, 0.05) !important;
-            backdrop-filter: blur(20px) !important;
-            -webkit-backdrop-filter: blur(20px) !important;
-            border-radius: 20px !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            background: rgba(255, 255, 255, 0.03) !important;
+            backdrop-filter: blur(30px) !important;
+            -webkit-backdrop-filter: blur(30px) !important;
+            border-radius: 24px !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
             box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1),
-                inset 0 -1px 0 rgba(255, 255, 255, 0.05),
-                0 0 0 1px rgba(255, 255, 255, 0.05) !important;
-            padding: 2rem 2rem !important;
+                0 8px 32px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.03) !important;
+            padding: 2.5rem 2.5rem !important;
             position: relative !important;
             overflow: hidden !important;
             margin: 0 auto !important;
-            max-width: 420px !important;
+            width: 100% !important;
+            min-height: 400px !important;
         }
         .glass-cube-wrapper::before {
             content: '';
             position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(0, 255, 200, 0.1) 0%, transparent 70%);
-            animation: rotate 20s linear infinite;
+            top: -40%;
+            left: -40%;
+            width: 180%;
+            height: 180%;
+            background: radial-gradient(circle, rgba(0, 255, 200, 0.15) 0%, transparent 65%);
+            animation: rotate 25s linear infinite;
             pointer-events: none;
             z-index: 0;
         }
         .glass-cube-wrapper::after {
             content: '';
             position: absolute;
-            top: -30%;
-            right: -30%;
-            width: 150%;
-            height: 150%;
-            background: radial-gradient(circle, rgba(0, 200, 255, 0.1) 0%, transparent 70%);
-            animation: rotate 15s linear infinite reverse;
+            top: -40%;
+            right: -40%;
+            width: 180%;
+            height: 180%;
+            background: radial-gradient(circle, rgba(0, 200, 255, 0.15) 0%, transparent 65%);
+            animation: rotate 20s linear infinite reverse;
             pointer-events: none;
             z-index: 0;
         }
@@ -1047,55 +1050,59 @@ if not st.session_state.authenticated:
             position: relative;
             z-index: 1;
         }
-        /* Target the middle column and apply glass cube styling - multiple selectors for reliability */
+        /* Target the middle column and apply glass cube styling - matches Dribbble exactly */
         .main .block-container > div[data-testid="column-container"] > div:nth-child(2),
         .main .block-container > div > div:nth-child(2),
         .main .block-container > div[data-testid="column-container"] > div:nth-of-type(2),
         div.glass-cube-applied,
-        div[data-testid="column"]:nth-of-type(2) {
-            background: rgba(255, 255, 255, 0.05) !important;
-            backdrop-filter: blur(20px) !important;
-            -webkit-backdrop-filter: blur(20px) !important;
-            border-radius: 20px !important;
-            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        div[data-testid="column"]:nth-of-type(2),
+        .glass-cube-wrapper {
+            background: rgba(255, 255, 255, 0.03) !important;
+            backdrop-filter: blur(30px) !important;
+            -webkit-backdrop-filter: blur(30px) !important;
+            border-radius: 24px !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
             box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1),
-                inset 0 -1px 0 rgba(255, 255, 255, 0.05) !important;
-            padding: 2rem 2rem !important;
+                0 8px 32px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.03) !important;
+            padding: 2.5rem 2.5rem !important;
             position: relative !important;
             overflow: hidden !important;
             margin: 0 !important;
             box-sizing: border-box !important;
+            width: 100% !important;
         }
-        /* Animated backgrounds via CSS pseudo-elements */
+        /* Animated backgrounds via CSS pseudo-elements - matches Dribbble design */
         .main .block-container > div[data-testid="column-container"] > div:nth-child(2)::before,
         .main .block-container > div > div:nth-child(2)::before,
         div.glass-cube-applied::before,
-        div[data-testid="column"]:nth-of-type(2)::before {
+        div[data-testid="column"]:nth-of-type(2)::before,
+        .glass-cube-wrapper::before {
             content: '';
             position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(0, 255, 200, 0.1) 0%, transparent 70%);
-            animation: rotate 20s linear infinite;
+            top: -40%;
+            left: -40%;
+            width: 180%;
+            height: 180%;
+            background: radial-gradient(circle, rgba(0, 255, 200, 0.15) 0%, transparent 65%);
+            animation: rotate 25s linear infinite;
             pointer-events: none;
             z-index: 0;
         }
         .main .block-container > div[data-testid="column-container"] > div:nth-child(2)::after,
         .main .block-container > div > div:nth-child(2)::after,
         div.glass-cube-applied::after,
-        div[data-testid="column"]:nth-of-type(2)::after {
+        div[data-testid="column"]:nth-of-type(2)::after,
+        .glass-cube-wrapper::after {
             content: '';
             position: absolute;
-            top: -30%;
-            right: -30%;
-            width: 150%;
-            height: 150%;
-            background: radial-gradient(circle, rgba(0, 200, 255, 0.1) 0%, transparent 70%);
-            animation: rotate 15s linear infinite reverse;
+            top: -40%;
+            right: -40%;
+            width: 180%;
+            height: 180%;
+            background: radial-gradient(circle, rgba(0, 200, 255, 0.15) 0%, transparent 65%);
+            animation: rotate 20s linear infinite reverse;
             pointer-events: none;
             z-index: 0;
         }
@@ -1114,25 +1121,30 @@ if not st.session_state.authenticated:
             // First, try to find and style the glass-cube-wrapper
             let targetContainer = document.querySelector('.glass-cube-wrapper');
             
-            // If wrapper exists, style it
-            if (targetContainer && !targetContainer.classList.contains('glass-cube-applied')) {
-                targetContainer.classList.add('glass-cube-applied');
+            // If wrapper exists, style it to match Dribbble design exactly
+            if (targetContainer) {
+                if (!targetContainer.classList.contains('glass-cube-applied')) {
+                    targetContainer.classList.add('glass-cube-applied');
+                }
+                
+                // Apply exact Dribbble styling
                 Object.assign(targetContainer.style, {
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    backdropFilter: 'blur(20px)',
-                    WebkitBackdropFilter: 'blur(20px)',
-                    borderRadius: '20px',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(255, 255, 255, 0.05)',
-                    padding: '2rem 2rem',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    backdropFilter: 'blur(30px)',
+                    WebkitBackdropFilter: 'blur(30px)',
+                    borderRadius: '24px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -1px 0 rgba(255, 255, 255, 0.03)',
+                    padding: '2.5rem 2.5rem',
                     position: 'relative',
                     overflow: 'hidden',
-                    margin: '0',
+                    margin: '0 auto',
                     width: '100%',
-                    boxSizing: 'border-box'
+                    boxSizing: 'border-box',
+                    minHeight: '400px'
                 });
                 
-                // Add animated backgrounds
+                // Add animated backgrounds matching Dribbble
                 let bgBefore = targetContainer.querySelector('.glass-bg-before');
                 let bgAfter = targetContainer.querySelector('.glass-bg-after');
                 
@@ -1141,12 +1153,12 @@ if not st.session_state.authenticated:
                     bgBefore.className = 'glass-bg-before';
                     Object.assign(bgBefore.style, {
                         position: 'absolute',
-                        top: '-50%',
-                        left: '-50%',
-                        width: '200%',
-                        height: '200%',
-                        background: 'radial-gradient(circle, rgba(0, 255, 200, 0.1) 0%, transparent 70%)',
-                        animation: 'rotate 20s linear infinite',
+                        top: '-40%',
+                        left: '-40%',
+                        width: '180%',
+                        height: '180%',
+                        background: 'radial-gradient(circle, rgba(0, 255, 200, 0.15) 0%, transparent 65%)',
+                        animation: 'rotate 25s linear infinite',
                         pointerEvents: 'none',
                         zIndex: '0'
                     });
@@ -1158,12 +1170,12 @@ if not st.session_state.authenticated:
                     bgAfter.className = 'glass-bg-after';
                     Object.assign(bgAfter.style, {
                         position: 'absolute',
-                        top: '-30%',
-                        right: '-30%',
-                        width: '150%',
-                        height: '150%',
-                        background: 'radial-gradient(circle, rgba(0, 200, 255, 0.1) 0%, transparent 70%)',
-                        animation: 'rotate 15s linear infinite reverse',
+                        top: '-40%',
+                        right: '-40%',
+                        width: '180%',
+                        height: '180%',
+                        background: 'radial-gradient(circle, rgba(0, 200, 255, 0.15) 0%, transparent 65%)',
+                        animation: 'rotate 20s linear infinite reverse',
                         pointerEvents: 'none',
                         zIndex: '0'
                     });
@@ -1179,10 +1191,11 @@ if not st.session_state.authenticated:
                         }
                     }
                 });
+                
                 return; // Exit early if wrapper was found and styled
             }
             
-            // Fallback: Find the middle column container if wrapper not found
+            // Fallback: Find and style the middle column container directly
             if (!targetContainer) {
                 // Method 1: Find column container
                 const columnContainer = document.querySelector('.main .block-container > div[data-testid="column-container"]');
@@ -1213,26 +1226,29 @@ if not st.session_state.authenticated:
                 }
             }
             
-            if (targetContainer && !targetContainer.classList.contains('glass-cube-applied')) {
-                targetContainer.classList.add('glass-cube-applied');
+            if (targetContainer) {
+                if (!targetContainer.classList.contains('glass-cube-applied')) {
+                    targetContainer.classList.add('glass-cube-applied');
+                }
                 
-                // Apply glass cube styles directly
+                // Apply exact Dribbble styling
                 Object.assign(targetContainer.style, {
-                    background: 'rgba(255, 255, 255, 0.05)',
-                    backdropFilter: 'blur(20px)',
-                    WebkitBackdropFilter: 'blur(20px)',
-                    borderRadius: '20px',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(255, 255, 255, 0.05)',
-                    padding: '2rem 2rem',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    backdropFilter: 'blur(30px)',
+                    WebkitBackdropFilter: 'blur(30px)',
+                    borderRadius: '24px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -1px 0 rgba(255, 255, 255, 0.03)',
+                    padding: '2.5rem 2.5rem',
                     position: 'relative',
                     overflow: 'hidden',
                     margin: '0',
                     width: '100%',
-                    boxSizing: 'border-box'
+                    boxSizing: 'border-box',
+                    minHeight: '400px'
                 });
                 
-                // Add animated backgrounds if they don't exist
+                // Add animated backgrounds matching Dribbble
                 let bgBefore = targetContainer.querySelector('.glass-bg-before');
                 let bgAfter = targetContainer.querySelector('.glass-bg-after');
                 
@@ -1241,12 +1257,12 @@ if not st.session_state.authenticated:
                     bgBefore.className = 'glass-bg-before';
                     Object.assign(bgBefore.style, {
                         position: 'absolute',
-                        top: '-50%',
-                        left: '-50%',
-                        width: '200%',
-                        height: '200%',
-                        background: 'radial-gradient(circle, rgba(0, 255, 200, 0.1) 0%, transparent 70%)',
-                        animation: 'rotate 20s linear infinite',
+                        top: '-40%',
+                        left: '-40%',
+                        width: '180%',
+                        height: '180%',
+                        background: 'radial-gradient(circle, rgba(0, 255, 200, 0.15) 0%, transparent 65%)',
+                        animation: 'rotate 25s linear infinite',
                         pointerEvents: 'none',
                         zIndex: '0'
                     });
@@ -1258,12 +1274,12 @@ if not st.session_state.authenticated:
                     bgAfter.className = 'glass-bg-after';
                     Object.assign(bgAfter.style, {
                         position: 'absolute',
-                        top: '-30%',
-                        right: '-30%',
-                        width: '150%',
-                        height: '150%',
-                        background: 'radial-gradient(circle, rgba(0, 200, 255, 0.1) 0%, transparent 70%)',
-                        animation: 'rotate 15s linear infinite reverse',
+                        top: '-40%',
+                        right: '-40%',
+                        width: '180%',
+                        height: '180%',
+                        background: 'radial-gradient(circle, rgba(0, 200, 255, 0.15) 0%, transparent 65%)',
+                        animation: 'rotate 20s linear infinite reverse',
                         pointerEvents: 'none',
                         zIndex: '0'
                     });
@@ -1344,7 +1360,7 @@ if not st.session_state.authenticated:
                     <div class="auth-header">
                         <h1>Welcome back</h1>
                         <p>Sign in to your account</p>
-            </div>
+                    </div>
         """, unsafe_allow_html=True)
         
         auth_tab1, auth_tab2 = st.tabs(["Login", "Register"])
