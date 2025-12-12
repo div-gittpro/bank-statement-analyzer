@@ -1001,10 +1001,8 @@ if not st.session_state.authenticated:
         [data-testid="stVerticalBlock"] > [style*="flex-direction: column"] > [data-testid="stVerticalBlock"] {
             gap: 0.5rem;
         }
-        /* Create glass cube container around all content in middle column */
-        .main .block-container > div[data-testid="column-container"] > div:nth-child(2),
-        .main .block-container > div > div:nth-child(2),
-        div[data-testid="column"]:nth-of-type(2) {
+        /* Glass cube wrapper - will be applied via JavaScript */
+        .glass-cube-wrapper {
             background: rgba(255, 255, 255, 0.05) !important;
             backdrop-filter: blur(20px) !important;
             -webkit-backdrop-filter: blur(20px) !important;
@@ -1018,19 +1016,55 @@ if not st.session_state.authenticated:
             padding: 2rem 2rem !important;
             position: relative !important;
             overflow: hidden !important;
-            min-height: fit-content !important;
-            margin: 0 !important;
+            margin: 0 auto !important;
+            max-width: 420px !important;
         }
-        /* Ensure all content inside the column is contained */
-        .main .block-container > div[data-testid="column-container"] > div:nth-child(2) > div,
-        .main .block-container > div > div:nth-child(2) > div,
-        div[data-testid="column"]:nth-of-type(2) > div {
-            margin: 0 !important;
-            padding: 0 !important;
+        .glass-cube-wrapper::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 255, 200, 0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .glass-cube-wrapper::after {
+            content: '';
+            position: absolute;
+            top: -30%;
+            right: -30%;
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle, rgba(0, 200, 255, 0.1) 0%, transparent 70%);
+            animation: rotate 15s linear infinite reverse;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .glass-cube-wrapper > * {
+            position: relative;
+            z-index: 1;
+        }
+        /* Target the middle column and apply glass cube styling */
+        .main .block-container > div[data-testid="column-container"] > div:nth-child(2),
+        .main .block-container > div > div:nth-child(2) {
+            background: rgba(255, 255, 255, 0.05) !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            border-radius: 20px !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.05) !important;
+            padding: 2rem 2rem !important;
+            position: relative !important;
+            overflow: hidden !important;
         }
         .main .block-container > div[data-testid="column-container"] > div:nth-child(2)::before,
-        .main .block-container > div > div:nth-child(2)::before,
-        div[data-testid="column"]:nth-of-type(2)::before {
+        .main .block-container > div > div:nth-child(2)::before {
             content: '';
             position: absolute;
             top: -50%;
@@ -1043,8 +1077,7 @@ if not st.session_state.authenticated:
             z-index: 0;
         }
         .main .block-container > div[data-testid="column-container"] > div:nth-child(2)::after,
-        .main .block-container > div > div:nth-child(2)::after,
-        div[data-testid="column"]:nth-of-type(2)::after {
+        .main .block-container > div > div:nth-child(2)::after {
             content: '';
             position: absolute;
             top: -30%;
@@ -1056,36 +1089,71 @@ if not st.session_state.authenticated:
             pointer-events: none;
             z-index: 0;
         }
-        /* Ensure all content inside is above the animated backgrounds */
         .main .block-container > div[data-testid="column-container"] > div:nth-child(2) > *,
-        .main .block-container > div > div:nth-child(2) > *,
-        div[data-testid="column"]:nth-of-type(2) > * {
-            position: relative;
-            z-index: 1;
-        }
-        /* Ensure all Streamlit elements inside are properly contained */
-        .main .block-container > div[data-testid="column-container"] > div:nth-child(2) [data-testid],
-        .main .block-container > div > div:nth-child(2) [data-testid],
-        div[data-testid="column"]:nth-of-type(2) [data-testid] {
-            position: relative;
-            z-index: 1;
-        }
-        /* Make sure the glass cube wraps all content including tabs and inputs */
-        .main .block-container > div[data-testid="column-container"] > div:nth-child(2) .stTabs,
-        .main .block-container > div > div:nth-child(2) .stTabs,
-        div[data-testid="column"]:nth-of-type(2) .stTabs {
+        .main .block-container > div > div:nth-child(2) > * {
             position: relative;
             z-index: 1;
         }
         </style>
+        <script>
+        // Wrap all content in the middle column with glass cube styling
+        function createGlassCube() {
+            const blockContainer = document.querySelector('.main .block-container');
+            if (!blockContainer) return;
+            
+            const columns = blockContainer.querySelectorAll('div[data-testid="column-container"] > div, div[data-testid="column"]');
+            if (columns.length >= 2) {
+                const middleColumn = columns[1]; // Second column (middle)
+                if (middleColumn && !middleColumn.classList.contains('glass-cube-applied')) {
+                    middleColumn.classList.add('glass-cube-applied');
+                    middleColumn.style.background = 'rgba(255, 255, 255, 0.05)';
+                    middleColumn.style.backdropFilter = 'blur(20px)';
+                    middleColumn.style.webkitBackdropFilter = 'blur(20px)';
+                    middleColumn.style.borderRadius = '20px';
+                    middleColumn.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+                    middleColumn.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(255, 255, 255, 0.05)';
+                    middleColumn.style.padding = '2rem 2rem';
+                    middleColumn.style.position = 'relative';
+                    middleColumn.style.overflow = 'hidden';
+                    
+                    // Add animated background
+                    const before = document.createElement('div');
+                    before.style.cssText = 'position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(0, 255, 200, 0.1) 0%, transparent 70%); animation: rotate 20s linear infinite; pointer-events: none; z-index: 0;';
+                    middleColumn.insertBefore(before, middleColumn.firstChild);
+                    
+                    const after = document.createElement('div');
+                    after.style.cssText = 'position: absolute; top: -30%; right: -30%; width: 150%; height: 150%; background: radial-gradient(circle, rgba(0, 200, 255, 0.1) 0%, transparent 70%); animation: rotate 15s linear infinite reverse; pointer-events: none; z-index: 0;';
+                    middleColumn.appendChild(after);
+                    
+                    // Ensure all children have proper z-index
+                    Array.from(middleColumn.children).forEach(child => {
+                        if (child !== before && child !== after) {
+                            child.style.position = 'relative';
+                            child.style.zIndex = '1';
+                        }
+                    });
+                }
+            }
+        }
+        
+        // Run on page load and after a short delay
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', createGlassCube);
+        } else {
+            createGlassCube();
+        }
+        setTimeout(createGlassCube, 100);
+        setTimeout(createGlassCube, 500);
+        </script>
     """, unsafe_allow_html=True)
     
     # Main container with centered glass card
     col1, col2, col3 = st.columns([1, 1, 1])
     
     with col2:
+        # Create glass cube container
         st.markdown("""
-            <div class="glass-card">
+            <div class="glass-cube-wrapper">
                 <div class="auth-content">
                     <div class="auth-header">
                         <h1>Welcome back</h1>
