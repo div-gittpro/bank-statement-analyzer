@@ -1051,7 +1051,8 @@ if not st.session_state.authenticated:
         .main .block-container > div[data-testid="column-container"] > div:nth-child(2),
         .main .block-container > div > div:nth-child(2),
         .main .block-container > div[data-testid="column-container"] > div:nth-of-type(2),
-        div.glass-cube-applied {
+        div.glass-cube-applied,
+        div[data-testid="column"]:nth-of-type(2) {
             background: rgba(255, 255, 255, 0.05) !important;
             backdrop-filter: blur(20px) !important;
             -webkit-backdrop-filter: blur(20px) !important;
@@ -1064,11 +1065,14 @@ if not st.session_state.authenticated:
             padding: 2rem 2rem !important;
             position: relative !important;
             overflow: hidden !important;
+            margin: 0 !important;
+            box-sizing: border-box !important;
         }
         /* Animated backgrounds via CSS pseudo-elements */
         .main .block-container > div[data-testid="column-container"] > div:nth-child(2)::before,
         .main .block-container > div > div:nth-child(2)::before,
-        div.glass-cube-applied::before {
+        div.glass-cube-applied::before,
+        div[data-testid="column"]:nth-of-type(2)::before {
             content: '';
             position: absolute;
             top: -50%;
@@ -1082,7 +1086,8 @@ if not st.session_state.authenticated:
         }
         .main .block-container > div[data-testid="column-container"] > div:nth-child(2)::after,
         .main .block-container > div > div:nth-child(2)::after,
-        div.glass-cube-applied::after {
+        div.glass-cube-applied::after,
+        div[data-testid="column"]:nth-of-type(2)::after {
             content: '';
             position: absolute;
             top: -30%;
@@ -1097,94 +1102,106 @@ if not st.session_state.authenticated:
         /* Ensure all content is above animated backgrounds */
         .main .block-container > div[data-testid="column-container"] > div:nth-child(2) > *:not(.glass-bg-before):not(.glass-bg-after),
         .main .block-container > div > div:nth-child(2) > *:not(.glass-bg-before):not(.glass-bg-after),
-        div.glass-cube-applied > *:not(.glass-bg-before):not(.glass-bg-after) {
-            position: relative;
-            z-index: 1;
+        div.glass-cube-applied > *:not(.glass-bg-before):not(.glass-bg-after),
+        div[data-testid="column"]:nth-of-type(2) > *:not(.glass-bg-before):not(.glass-bg-after) {
+            position: relative !important;
+            z-index: 1 !important;
         }
         </style>
         <script>
-        // Enhanced function to create glass cube around all content
+        // Enhanced function to create glass cube around ALL content
         function createGlassCube() {
-            // Try multiple selectors to find the middle column
-            let middleColumn = null;
+            // Find the middle column container
+            let targetContainer = null;
             
-            // Method 1: Find by column-container
+            // Method 1: Find column container
             const columnContainer = document.querySelector('.main .block-container > div[data-testid="column-container"]');
             if (columnContainer) {
-                const cols = columnContainer.querySelectorAll('div[data-testid="column"], div[style*="flex"]');
+                const cols = columnContainer.children;
                 if (cols.length >= 2) {
-                    middleColumn = cols[1];
+                    targetContainer = cols[1]; // Middle column
                 }
             }
             
-            // Method 2: Find by direct children
-            if (!middleColumn) {
+            // Method 2: Find by structure
+            if (!targetContainer) {
                 const blockContainer = document.querySelector('.main .block-container');
                 if (blockContainer) {
-                    const directChildren = Array.from(blockContainer.children);
-                    const columnDivs = directChildren.filter(child => 
-                        child.querySelector && (child.querySelector('[data-testid="stMarkdown"]') || child.querySelector('.stTabs'))
-                    );
-                    if (columnDivs.length >= 2) {
-                        middleColumn = columnDivs[1];
+                    const row = blockContainer.querySelector('div[data-testid="column-container"]') || blockContainer.children[0];
+                    if (row && row.children.length >= 2) {
+                        targetContainer = row.children[1];
                     }
                 }
             }
             
-            // Method 3: Find by content (has tabs or markdown)
-            if (!middleColumn) {
-                const allDivs = document.querySelectorAll('.main .block-container > div > div');
-                for (let div of allDivs) {
-                    if (div.querySelector('.stTabs') || div.querySelector('[data-testid="stMarkdown"]')) {
-                        middleColumn = div;
-                        break;
-                    }
+            // Method 3: Find by content
+            if (!targetContainer) {
+                const tabs = document.querySelector('.stTabs');
+                if (tabs) {
+                    targetContainer = tabs.closest('div[data-testid="column"]') || tabs.parentElement.parentElement;
                 }
             }
             
-            if (middleColumn && !middleColumn.classList.contains('glass-cube-applied')) {
-                middleColumn.classList.add('glass-cube-applied');
+            if (targetContainer && !targetContainer.classList.contains('glass-cube-applied')) {
+                targetContainer.classList.add('glass-cube-applied');
                 
-                // Apply glass cube styles
-                middleColumn.style.cssText += `
-                    background: rgba(255, 255, 255, 0.05) !important;
-                    backdrop-filter: blur(20px) !important;
-                    -webkit-backdrop-filter: blur(20px) !important;
-                    border-radius: 20px !important;
-                    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(255, 255, 255, 0.05) !important;
-                    padding: 2rem 2rem !important;
-                    position: relative !important;
-                    overflow: hidden !important;
-                `;
-                
-                // Check if animated backgrounds already exist
-                let hasBefore = false;
-                let hasAfter = false;
-                Array.from(middleColumn.children).forEach(child => {
-                    if (child.classList && child.classList.contains('glass-bg-before')) hasBefore = true;
-                    if (child.classList && child.classList.contains('glass-bg-after')) hasAfter = true;
+                // Apply glass cube styles directly
+                Object.assign(targetContainer.style, {
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                    borderRadius: '20px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(255, 255, 255, 0.05)',
+                    padding: '2rem 2rem',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    margin: '0',
+                    width: '100%',
+                    boxSizing: 'border-box'
                 });
                 
-                // Add animated background - before
-                if (!hasBefore) {
-                    const before = document.createElement('div');
-                    before.className = 'glass-bg-before';
-                    before.style.cssText = 'position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(0, 255, 200, 0.1) 0%, transparent 70%); animation: rotate 20s linear infinite; pointer-events: none; z-index: 0;';
-                    middleColumn.insertBefore(before, middleColumn.firstChild);
+                // Add animated backgrounds if they don't exist
+                let bgBefore = targetContainer.querySelector('.glass-bg-before');
+                let bgAfter = targetContainer.querySelector('.glass-bg-after');
+                
+                if (!bgBefore) {
+                    bgBefore = document.createElement('div');
+                    bgBefore.className = 'glass-bg-before';
+                    Object.assign(bgBefore.style, {
+                        position: 'absolute',
+                        top: '-50%',
+                        left: '-50%',
+                        width: '200%',
+                        height: '200%',
+                        background: 'radial-gradient(circle, rgba(0, 255, 200, 0.1) 0%, transparent 70%)',
+                        animation: 'rotate 20s linear infinite',
+                        pointerEvents: 'none',
+                        zIndex: '0'
+                    });
+                    targetContainer.insertBefore(bgBefore, targetContainer.firstChild);
                 }
                 
-                // Add animated background - after
-                if (!hasAfter) {
-                    const after = document.createElement('div');
-                    after.className = 'glass-bg-after';
-                    after.style.cssText = 'position: absolute; top: -30%; right: -30%; width: 150%; height: 150%; background: radial-gradient(circle, rgba(0, 200, 255, 0.1) 0%, transparent 70%); animation: rotate 15s linear infinite reverse; pointer-events: none; z-index: 0;';
-                    middleColumn.appendChild(after);
+                if (!bgAfter) {
+                    bgAfter = document.createElement('div');
+                    bgAfter.className = 'glass-bg-after';
+                    Object.assign(bgAfter.style, {
+                        position: 'absolute',
+                        top: '-30%',
+                        right: '-30%',
+                        width: '150%',
+                        height: '150%',
+                        background: 'radial-gradient(circle, rgba(0, 200, 255, 0.1) 0%, transparent 70%)',
+                        animation: 'rotate 15s linear infinite reverse',
+                        pointerEvents: 'none',
+                        zIndex: '0'
+                    });
+                    targetContainer.appendChild(bgAfter);
                 }
                 
-                // Ensure all children have proper z-index
-                Array.from(middleColumn.children).forEach(child => {
-                    if (!child.classList.contains('glass-bg-before') && !child.classList.contains('glass-bg-after')) {
+                // Ensure all content is above backgrounds
+                Array.from(targetContainer.children).forEach(child => {
+                    if (child !== bgBefore && child !== bgAfter) {
                         if (child.style) {
                             child.style.position = 'relative';
                             child.style.zIndex = '1';
@@ -1194,26 +1211,54 @@ if not st.session_state.authenticated:
             }
         }
         
-        // Run multiple times to catch Streamlit's dynamic rendering
+        // More aggressive function to ensure glass cube wraps everything
         function initGlassCube() {
             createGlassCube();
-            setTimeout(createGlassCube, 100);
+            // Try multiple times with delays
+            setTimeout(createGlassCube, 50);
+            setTimeout(createGlassCube, 150);
             setTimeout(createGlassCube, 300);
-            setTimeout(createGlassCube, 600);
-            setTimeout(createGlassCube, 1000);
+            setTimeout(createGlassCube, 500);
+            setTimeout(createGlassCube, 800);
+            setTimeout(createGlassCube, 1200);
         }
         
+        // Run immediately
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initGlassCube);
+            document.addEventListener('DOMContentLoaded', function() {
+                initGlassCube();
+                // Keep trying
+                setInterval(createGlassCube, 2000);
+            });
         } else {
             initGlassCube();
+            // Keep trying
+            setInterval(createGlassCube, 2000);
         }
         
-        // Also run when Streamlit reruns
+        // Watch for any DOM changes
         const observer = new MutationObserver(function(mutations) {
-            initGlassCube();
+            let shouldUpdate = false;
+            mutations.forEach(function(mutation) {
+                if (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0) {
+                    shouldUpdate = true;
+                }
+            });
+            if (shouldUpdate) {
+                setTimeout(createGlassCube, 100);
+            }
         });
-        observer.observe(document.body, { childList: true, subtree: true });
+        
+        // Observe the entire document
+        observer.observe(document.body, { 
+            childList: true, 
+            subtree: true,
+            attributes: false
+        });
+        
+        // Also listen for Streamlit events
+        window.addEventListener('load', initGlassCube);
+        document.addEventListener('streamlit:render', initGlassCube);
         </script>
     """, unsafe_allow_html=True)
     
@@ -1221,14 +1266,12 @@ if not st.session_state.authenticated:
     col1, col2, col3 = st.columns([1, 1, 1])
     
     with col2:
-        # Create glass cube container
+        # Add header first
         st.markdown("""
-            <div class="glass-cube-wrapper">
-                <div class="auth-content">
-                    <div class="auth-header">
-                        <h1>Welcome back</h1>
-                        <p>Sign in to your account</p>
-                    </div>
+            <div class="auth-header">
+                <h1>Welcome back</h1>
+                <p>Sign in to your account</p>
+            </div>
         """, unsafe_allow_html=True)
         
         auth_tab1, auth_tab2 = st.tabs(["Login", "Register"])
@@ -1297,11 +1340,6 @@ if not st.session_state.authenticated:
                     Already have an account? Switch to the Login tab above
                 </div>
             """, unsafe_allow_html=True)
-        
-        st.markdown("""
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Main App
