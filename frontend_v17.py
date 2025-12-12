@@ -813,7 +813,12 @@ if not st.session_state.authenticated:
         .main .block-container {
             padding-top: 2rem;
             padding-bottom: 2rem;
-            max-width: 420px;
+            max-width: 450px;
+        }
+        /* Ensure the column container forms a complete glass cube */
+        .main .block-container > div[data-testid="column-container"] {
+            display: flex;
+            gap: 1rem;
         }
         .glass-card-wrapper {
             background: rgba(255, 255, 255, 0.05);
@@ -996,8 +1001,8 @@ if not st.session_state.authenticated:
         [data-testid="stVerticalBlock"] > [style*="flex-direction: column"] > [data-testid="stVerticalBlock"] {
             gap: 0.5rem;
         }
-        /* Style the middle column container as glass card */
-        section[data-testid="stSidebar"] + div .block-container > div > div:nth-child(2),
+        /* Create glass cube container around all content in middle column */
+        .main .block-container > div[data-testid="column-container"] > div:nth-child(2),
         .main .block-container > div > div:nth-child(2),
         div[data-testid="column"]:nth-of-type(2) {
             background: rgba(255, 255, 255, 0.05) !important;
@@ -1007,12 +1012,23 @@ if not st.session_state.authenticated:
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
             box-shadow: 
                 0 8px 32px rgba(0, 0, 0, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+                inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+                0 0 0 1px rgba(255, 255, 255, 0.05) !important;
             padding: 2rem 2rem !important;
             position: relative !important;
             overflow: hidden !important;
+            min-height: fit-content !important;
+            margin: 0 !important;
         }
-        section[data-testid="stSidebar"] + div .block-container > div > div:nth-child(2)::before,
+        /* Ensure all content inside the column is contained */
+        .main .block-container > div[data-testid="column-container"] > div:nth-child(2) > div,
+        .main .block-container > div > div:nth-child(2) > div,
+        div[data-testid="column"]:nth-of-type(2) > div {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .main .block-container > div[data-testid="column-container"] > div:nth-child(2)::before,
         .main .block-container > div > div:nth-child(2)::before,
         div[data-testid="column"]:nth-of-type(2)::before {
             content: '';
@@ -1026,7 +1042,7 @@ if not st.session_state.authenticated:
             pointer-events: none;
             z-index: 0;
         }
-        section[data-testid="stSidebar"] + div .block-container > div > div:nth-child(2)::after,
+        .main .block-container > div[data-testid="column-container"] > div:nth-child(2)::after,
         .main .block-container > div > div:nth-child(2)::after,
         div[data-testid="column"]:nth-of-type(2)::after {
             content: '';
@@ -1040,9 +1056,24 @@ if not st.session_state.authenticated:
             pointer-events: none;
             z-index: 0;
         }
-        section[data-testid="stSidebar"] + div .block-container > div > div:nth-child(2) > *,
+        /* Ensure all content inside is above the animated backgrounds */
+        .main .block-container > div[data-testid="column-container"] > div:nth-child(2) > *,
         .main .block-container > div > div:nth-child(2) > *,
         div[data-testid="column"]:nth-of-type(2) > * {
+            position: relative;
+            z-index: 1;
+        }
+        /* Ensure all Streamlit elements inside are properly contained */
+        .main .block-container > div[data-testid="column-container"] > div:nth-child(2) [data-testid],
+        .main .block-container > div > div:nth-child(2) [data-testid],
+        div[data-testid="column"]:nth-of-type(2) [data-testid] {
+            position: relative;
+            z-index: 1;
+        }
+        /* Make sure the glass cube wraps all content including tabs and inputs */
+        .main .block-container > div[data-testid="column-container"] > div:nth-child(2) .stTabs,
+        .main .block-container > div > div:nth-child(2) .stTabs,
+        div[data-testid="column"]:nth-of-type(2) .stTabs {
             position: relative;
             z-index: 1;
         }
