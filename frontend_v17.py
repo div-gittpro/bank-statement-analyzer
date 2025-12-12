@@ -811,9 +811,9 @@ if not st.session_state.authenticated:
             background-attachment: fixed;
         }
         .main .block-container {
-            padding-top: 4rem;
-            padding-bottom: 4rem;
-            max-width: 450px;
+            padding-top: 2rem;
+            padding-bottom: 2rem;
+            max-width: 420px;
         }
         .glass-card {
             background: rgba(255, 255, 255, 0.05);
@@ -824,7 +824,7 @@ if not st.session_state.authenticated:
             box-shadow: 
                 0 8px 32px rgba(0, 0, 0, 0.4),
                 inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            padding: 3rem 2.5rem;
+            padding: 2rem 2rem;
             width: 100%;
             animation: slideUp 0.6s ease-out;
             position: relative;
@@ -872,18 +872,18 @@ if not st.session_state.authenticated:
         }
         .auth-header {
             text-align: left;
-            margin-bottom: 2.5rem;
+            margin-bottom: 1.5rem;
         }
         .auth-header h1 {
-            font-size: 2rem;
+            font-size: 1.75rem;
             font-weight: 600;
             color: #ffffff;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.25rem;
             letter-spacing: -0.5px;
         }
         .auth-header p {
             color: rgba(255, 255, 255, 0.6);
-            font-size: 0.95rem;
+            font-size: 0.875rem;
             font-weight: 400;
             margin: 0;
         }
@@ -893,17 +893,18 @@ if not st.session_state.authenticated:
             border-radius: 0;
             padding: 0;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
         }
         .stTabs [data-baseweb="tab"] {
             border-radius: 0;
-            padding: 1rem 0;
+            padding: 0.75rem 0;
             font-weight: 500;
             transition: all 0.3s ease;
             color: rgba(255, 255, 255, 0.5);
             background: transparent;
             border-bottom: 2px solid transparent;
             margin-right: 2rem;
+            font-size: 0.9rem;
         }
         .stTabs [aria-selected="true"] {
             color: #ffffff;
@@ -913,11 +914,14 @@ if not st.session_state.authenticated:
         .stTabs [aria-selected="false"]:hover {
             color: rgba(255, 255, 255, 0.8);
         }
+        .stTextInput {
+            margin-bottom: 1rem;
+        }
         .stTextInput>div>div>input {
             border-radius: 12px;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 0.875rem 1rem;
-            font-size: 0.95rem;
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
             transition: all 0.3s ease;
             background-color: rgba(255, 255, 255, 0.05);
             color: #ffffff;
@@ -938,21 +942,23 @@ if not st.session_state.authenticated:
         .stTextInput label {
             font-weight: 500;
             color: rgba(255, 255, 255, 0.9);
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            margin-bottom: 0.4rem;
+        }
+        .stButton {
+            margin-top: 0.5rem;
         }
         .stButton>button {
             background: #00ffc8;
             color: #0a0a0a;
             border: none;
             border-radius: 12px;
-            padding: 0.875rem 2rem;
+            padding: 0.75rem 2rem;
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             transition: all 0.3s ease;
             box-shadow: 0 4px 20px rgba(0, 255, 200, 0.3);
             width: 100%;
-            margin-top: 0.5rem;
         }
         .stButton>button:hover {
             transform: translateY(-2px);
@@ -961,9 +967,8 @@ if not st.session_state.authenticated:
         }
         .auth-link {
             text-align: center;
-            margin-top: 1.5rem;
             color: rgba(255, 255, 255, 0.6);
-            font-size: 0.875rem;
+            font-size: 0.8rem;
         }
         .auth-link a {
             color: #00ffc8;
@@ -978,12 +983,20 @@ if not st.session_state.authenticated:
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
             color: #ffffff;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .element-container {
+            margin-bottom: 0.5rem;
+        }
+        [data-testid="stVerticalBlock"] > [style*="flex-direction: column"] > [data-testid="stVerticalBlock"] {
+            gap: 0.5rem;
         }
         </style>
     """, unsafe_allow_html=True)
     
     # Main container with centered glass card
-    col1, col2, col3 = st.columns([1, 1.2, 1])
+    col1, col2, col3 = st.columns([1, 1, 1])
     
     with col2:
         st.markdown("""
@@ -998,8 +1011,6 @@ if not st.session_state.authenticated:
         auth_tab1, auth_tab2 = st.tabs(["Login", "Register"])
         
         with auth_tab1:
-            st.markdown("<div style='margin-top: 0.5rem;'></div>", unsafe_allow_html=True)
-            
             log_user = st.text_input(
                 "Account Number", 
                 key="login_user", 
@@ -1012,8 +1023,6 @@ if not st.session_state.authenticated:
                 key="login_pass", 
                 placeholder="Enter your password"
             )
-            
-            st.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
             
             if st.button("Sign In", use_container_width=True, type="primary"):
                 if not log_user or not log_pass:
@@ -1030,14 +1039,12 @@ if not st.session_state.authenticated:
                         st.error(f"❌ {msg}")
             
             st.markdown("""
-                <div class="auth-link">
+                <div class="auth-link" style="margin-top: 1rem;">
                     Don't have an account? Switch to the Register tab above
                 </div>
             """, unsafe_allow_html=True)
         
         with auth_tab2:
-            st.markdown("<div style='margin-top: 0.5rem;'></div>", unsafe_allow_html=True)
-            
             reg_user = st.text_input(
                 "Account Number", 
                 key="reg_user", 
@@ -1051,8 +1058,6 @@ if not st.session_state.authenticated:
                 placeholder="Create a strong password"
             )
             
-            st.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
-            
             if st.button("Create Account", use_container_width=True, type="primary"):
                 if not reg_user or not reg_pass:
                     st.warning("⚠️ Please enter both account number and password.")
@@ -1065,7 +1070,7 @@ if not st.session_state.authenticated:
                         st.error(f"❌ {msg}")
             
             st.markdown("""
-                <div class="auth-link">
+                <div class="auth-link" style="margin-top: 1rem;">
                     Already have an account? Switch to the Login tab above
                 </div>
             """, unsafe_allow_html=True)
