@@ -1047,9 +1047,11 @@ if not st.session_state.authenticated:
             position: relative;
             z-index: 1;
         }
-        /* Target the middle column and apply glass cube styling */
+        /* Target the middle column and apply glass cube styling - multiple selectors for reliability */
         .main .block-container > div[data-testid="column-container"] > div:nth-child(2),
-        .main .block-container > div > div:nth-child(2) {
+        .main .block-container > div > div:nth-child(2),
+        .main .block-container > div[data-testid="column-container"] > div:nth-of-type(2),
+        div.glass-cube-applied {
             background: rgba(255, 255, 255, 0.05) !important;
             backdrop-filter: blur(20px) !important;
             -webkit-backdrop-filter: blur(20px) !important;
@@ -1063,8 +1065,10 @@ if not st.session_state.authenticated:
             position: relative !important;
             overflow: hidden !important;
         }
+        /* Animated backgrounds via CSS pseudo-elements */
         .main .block-container > div[data-testid="column-container"] > div:nth-child(2)::before,
-        .main .block-container > div > div:nth-child(2)::before {
+        .main .block-container > div > div:nth-child(2)::before,
+        div.glass-cube-applied::before {
             content: '';
             position: absolute;
             top: -50%;
@@ -1077,7 +1081,8 @@ if not st.session_state.authenticated:
             z-index: 0;
         }
         .main .block-container > div[data-testid="column-container"] > div:nth-child(2)::after,
-        .main .block-container > div > div:nth-child(2)::after {
+        .main .block-container > div > div:nth-child(2)::after,
+        div.glass-cube-applied::after {
             content: '';
             position: absolute;
             top: -30%;
@@ -1089,61 +1094,126 @@ if not st.session_state.authenticated:
             pointer-events: none;
             z-index: 0;
         }
-        .main .block-container > div[data-testid="column-container"] > div:nth-child(2) > *,
-        .main .block-container > div > div:nth-child(2) > * {
+        /* Ensure all content is above animated backgrounds */
+        .main .block-container > div[data-testid="column-container"] > div:nth-child(2) > *:not(.glass-bg-before):not(.glass-bg-after),
+        .main .block-container > div > div:nth-child(2) > *:not(.glass-bg-before):not(.glass-bg-after),
+        div.glass-cube-applied > *:not(.glass-bg-before):not(.glass-bg-after) {
             position: relative;
             z-index: 1;
         }
         </style>
         <script>
-        // Wrap all content in the middle column with glass cube styling
+        // Enhanced function to create glass cube around all content
         function createGlassCube() {
-            const blockContainer = document.querySelector('.main .block-container');
-            if (!blockContainer) return;
+            // Try multiple selectors to find the middle column
+            let middleColumn = null;
             
-            const columns = blockContainer.querySelectorAll('div[data-testid="column-container"] > div, div[data-testid="column"]');
-            if (columns.length >= 2) {
-                const middleColumn = columns[1]; // Second column (middle)
-                if (middleColumn && !middleColumn.classList.contains('glass-cube-applied')) {
-                    middleColumn.classList.add('glass-cube-applied');
-                    middleColumn.style.background = 'rgba(255, 255, 255, 0.05)';
-                    middleColumn.style.backdropFilter = 'blur(20px)';
-                    middleColumn.style.webkitBackdropFilter = 'blur(20px)';
-                    middleColumn.style.borderRadius = '20px';
-                    middleColumn.style.border = '1px solid rgba(255, 255, 255, 0.1)';
-                    middleColumn.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(255, 255, 255, 0.05)';
-                    middleColumn.style.padding = '2rem 2rem';
-                    middleColumn.style.position = 'relative';
-                    middleColumn.style.overflow = 'hidden';
-                    
-                    // Add animated background
+            // Method 1: Find by column-container
+            const columnContainer = document.querySelector('.main .block-container > div[data-testid="column-container"]');
+            if (columnContainer) {
+                const cols = columnContainer.querySelectorAll('div[data-testid="column"], div[style*="flex"]');
+                if (cols.length >= 2) {
+                    middleColumn = cols[1];
+                }
+            }
+            
+            // Method 2: Find by direct children
+            if (!middleColumn) {
+                const blockContainer = document.querySelector('.main .block-container');
+                if (blockContainer) {
+                    const directChildren = Array.from(blockContainer.children);
+                    const columnDivs = directChildren.filter(child => 
+                        child.querySelector && (child.querySelector('[data-testid="stMarkdown"]') || child.querySelector('.stTabs'))
+                    );
+                    if (columnDivs.length >= 2) {
+                        middleColumn = columnDivs[1];
+                    }
+                }
+            }
+            
+            // Method 3: Find by content (has tabs or markdown)
+            if (!middleColumn) {
+                const allDivs = document.querySelectorAll('.main .block-container > div > div');
+                for (let div of allDivs) {
+                    if (div.querySelector('.stTabs') || div.querySelector('[data-testid="stMarkdown"]')) {
+                        middleColumn = div;
+                        break;
+                    }
+                }
+            }
+            
+            if (middleColumn && !middleColumn.classList.contains('glass-cube-applied')) {
+                middleColumn.classList.add('glass-cube-applied');
+                
+                // Apply glass cube styles
+                middleColumn.style.cssText += `
+                    background: rgba(255, 255, 255, 0.05) !important;
+                    backdrop-filter: blur(20px) !important;
+                    -webkit-backdrop-filter: blur(20px) !important;
+                    border-radius: 20px !important;
+                    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(255, 255, 255, 0.05) !important;
+                    padding: 2rem 2rem !important;
+                    position: relative !important;
+                    overflow: hidden !important;
+                `;
+                
+                // Check if animated backgrounds already exist
+                let hasBefore = false;
+                let hasAfter = false;
+                Array.from(middleColumn.children).forEach(child => {
+                    if (child.classList && child.classList.contains('glass-bg-before')) hasBefore = true;
+                    if (child.classList && child.classList.contains('glass-bg-after')) hasAfter = true;
+                });
+                
+                // Add animated background - before
+                if (!hasBefore) {
                     const before = document.createElement('div');
+                    before.className = 'glass-bg-before';
                     before.style.cssText = 'position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(0, 255, 200, 0.1) 0%, transparent 70%); animation: rotate 20s linear infinite; pointer-events: none; z-index: 0;';
                     middleColumn.insertBefore(before, middleColumn.firstChild);
-                    
+                }
+                
+                // Add animated background - after
+                if (!hasAfter) {
                     const after = document.createElement('div');
+                    after.className = 'glass-bg-after';
                     after.style.cssText = 'position: absolute; top: -30%; right: -30%; width: 150%; height: 150%; background: radial-gradient(circle, rgba(0, 200, 255, 0.1) 0%, transparent 70%); animation: rotate 15s linear infinite reverse; pointer-events: none; z-index: 0;';
                     middleColumn.appendChild(after);
-                    
-                    // Ensure all children have proper z-index
-                    Array.from(middleColumn.children).forEach(child => {
-                        if (child !== before && child !== after) {
+                }
+                
+                // Ensure all children have proper z-index
+                Array.from(middleColumn.children).forEach(child => {
+                    if (!child.classList.contains('glass-bg-before') && !child.classList.contains('glass-bg-after')) {
+                        if (child.style) {
                             child.style.position = 'relative';
                             child.style.zIndex = '1';
                         }
-                    });
-                }
+                    }
+                });
             }
         }
         
-        // Run on page load and after a short delay
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', createGlassCube);
-        } else {
+        // Run multiple times to catch Streamlit's dynamic rendering
+        function initGlassCube() {
             createGlassCube();
+            setTimeout(createGlassCube, 100);
+            setTimeout(createGlassCube, 300);
+            setTimeout(createGlassCube, 600);
+            setTimeout(createGlassCube, 1000);
         }
-        setTimeout(createGlassCube, 100);
-        setTimeout(createGlassCube, 500);
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initGlassCube);
+        } else {
+            initGlassCube();
+        }
+        
+        // Also run when Streamlit reruns
+        const observer = new MutationObserver(function(mutations) {
+            initGlassCube();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
         </script>
     """, unsafe_allow_html=True)
     
