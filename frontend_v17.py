@@ -800,27 +800,61 @@ if "categories" not in st.session_state:
 # Auth UI
 # ──────────────────────────────────────────────────────────────────────────────
 if not st.session_state.authenticated:
-    # Modern gradient background container
+    # Glassmorphism design with dark theme
     st.markdown("""
         <style>
         .stApp {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background: #0a0a0a;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(0, 255, 200, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(0, 200, 255, 0.15) 0%, transparent 50%);
             background-attachment: fixed;
         }
         .main .block-container {
-            padding-top: 3rem;
-            padding-bottom: 3rem;
-            max-width: 600px;
+            padding-top: 4rem;
+            padding-bottom: 4rem;
+            max-width: 450px;
         }
-        .auth-card {
-            background: rgba(255, 255, 255, 0.98);
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(20px);
-            border-radius: 24px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.5);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
             padding: 3rem 2.5rem;
             width: 100%;
             animation: slideUp 0.6s ease-out;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 255, 200, 0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+            pointer-events: none;
+        }
+        .glass-card::after {
+            content: '';
+            position: absolute;
+            top: -30%;
+            right: -30%;
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle, rgba(0, 200, 255, 0.1) 0%, transparent 70%);
+            animation: rotate 15s linear infinite reverse;
+            pointer-events: none;
+        }
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
         @keyframes slideUp {
             from {
@@ -832,154 +866,156 @@ if not st.session_state.authenticated:
                 transform: translateY(0);
             }
         }
+        .auth-content {
+            position: relative;
+            z-index: 1;
+        }
         .auth-header {
-            text-align: center;
+            text-align: left;
             margin-bottom: 2.5rem;
         }
         .auth-header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-size: 2rem;
+            font-weight: 600;
+            color: #ffffff;
             margin-bottom: 0.5rem;
+            letter-spacing: -0.5px;
         }
         .auth-header p {
-            color: #666;
-            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.95rem;
             font-weight: 400;
-        }
-        .auth-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            display: block;
+            margin: 0;
         }
         .stTabs [data-baseweb="tab-list"] {
-            gap: 0.5rem;
-            background: #f5f5f5;
-            border-radius: 12px;
-            padding: 0.5rem;
+            gap: 0;
+            background: transparent;
+            border-radius: 0;
+            padding: 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 2rem;
         }
         .stTabs [data-baseweb="tab"] {
-            border-radius: 8px;
-            padding: 0.75rem 1.5rem;
-            font-weight: 600;
+            border-radius: 0;
+            padding: 1rem 0;
+            font-weight: 500;
             transition: all 0.3s ease;
+            color: rgba(255, 255, 255, 0.5);
+            background: transparent;
+            border-bottom: 2px solid transparent;
+            margin-right: 2rem;
         }
         .stTabs [aria-selected="true"] {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            color: #ffffff;
+            border-bottom-color: #00ffc8;
+            background: transparent;
         }
-        .stTabs [aria-selected="false"] {
-            color: #666;
-        }
-        .auth-form-group {
-            margin-bottom: 1.5rem;
-        }
-        .auth-form-group label {
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 0.5rem;
-            display: block;
-            font-size: 0.95rem;
+        .stTabs [aria-selected="false"]:hover {
+            color: rgba(255, 255, 255, 0.8);
         }
         .stTextInput>div>div>input {
             border-radius: 12px;
-            border: 2px solid #e0e0e0;
-            padding: 0.75rem 1rem;
-            font-size: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0.875rem 1rem;
+            font-size: 0.95rem;
             transition: all 0.3s ease;
-            background-color: #fafafa;
+            background-color: rgba(255, 255, 255, 0.05);
+            color: #ffffff;
+        }
+        .stTextInput>div>div>input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
         }
         .stTextInput>div>div>input:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            background-color: white;
+            border-color: rgba(0, 255, 200, 0.5);
+            box-shadow: 0 0 0 3px rgba(0, 255, 200, 0.1);
+            background-color: rgba(255, 255, 255, 0.08);
+            outline: none;
         }
         .stTextInput>div>div>input:hover {
-            border-color: #b0b0b0;
+            border-color: rgba(255, 255, 255, 0.2);
+            background-color: rgba(255, 255, 255, 0.07);
         }
         .stTextInput label {
-            font-weight: 600;
-            color: #333;
-            font-size: 0.95rem;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.9rem;
             margin-bottom: 0.5rem;
         }
         .stButton>button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: #00ffc8;
+            color: #0a0a0a;
             border: none;
             border-radius: 12px;
             padding: 0.875rem 2rem;
             font-weight: 600;
-            font-size: 1rem;
+            font-size: 0.95rem;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 20px rgba(0, 255, 200, 0.3);
+            width: 100%;
+            margin-top: 0.5rem;
         }
         .stButton>button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+            box-shadow: 0 6px 30px rgba(0, 255, 200, 0.4);
+            background: #00e6b8;
         }
-        .auth-divider {
+        .auth-link {
             text-align: center;
-            margin: 2rem 0;
-            position: relative;
+            margin-top: 1.5rem;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.875rem;
         }
-        .auth-divider::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: 50%;
-            height: 1px;
-            background: #e0e0e0;
+        .auth-link a {
+            color: #00ffc8;
+            text-decoration: none;
+            font-weight: 500;
         }
-        .auth-divider span {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 0 1rem;
-            color: #999;
-            position: relative;
+        .auth-link a:hover {
+            text-decoration: underline;
+        }
+        .stSuccess, .stError, .stWarning, .stInfo {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: #ffffff;
         }
         </style>
     """, unsafe_allow_html=True)
     
-    # Main container with centered card
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # Main container with centered glass card
+    col1, col2, col3 = st.columns([1, 1.2, 1])
     
     with col2:
         st.markdown("""
-            <div class="auth-card">
-                <div class="auth-header">
-                    <span class="auth-icon">💰</span>
-                    <h1>Bank Statement Analyzer</h1>
-                    <p>Transform your financial data into actionable insights</p>
-                </div>
+            <div class="glass-card">
+                <div class="auth-content">
+                    <div class="auth-header">
+                        <h1>Welcome back</h1>
+                        <p>Sign in to your account</p>
+                    </div>
         """, unsafe_allow_html=True)
         
-        auth_tab1, auth_tab2 = st.tabs(["🔑 Login", "✨ Register"])
+        auth_tab1, auth_tab2 = st.tabs(["Login", "Register"])
         
         with auth_tab1:
-            st.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='margin-top: 0.5rem;'></div>", unsafe_allow_html=True)
             
             log_user = st.text_input(
-                "👤 Account Number", 
+                "Account Number", 
                 key="login_user", 
-                placeholder="Enter your account number",
-                help="Enter the account number you used during registration"
+                placeholder="Enter your account number"
             )
             
             log_pass = st.text_input(
-                "🔒 Password", 
+                "Password", 
                 type="password", 
                 key="login_pass", 
-                placeholder="Enter your password",
-                help="Enter your secure password"
+                placeholder="Enter your password"
             )
             
-            st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
             
-            if st.button("🚀 Sign In", use_container_width=True, type="primary"):
+            if st.button("Sign In", use_container_width=True, type="primary"):
                 if not log_user or not log_pass:
                     st.warning("⚠️ Please enter both account number and password.")
                 else:
@@ -994,34 +1030,30 @@ if not st.session_state.authenticated:
                         st.error(f"❌ {msg}")
             
             st.markdown("""
-                <div style='text-align: center; margin-top: 1.5rem;'>
-                    <p style='color: #999; font-size: 0.875rem;'>
-                        Don't have an account? Switch to the Register tab above
-                    </p>
+                <div class="auth-link">
+                    Don't have an account? Switch to the Register tab above
                 </div>
             """, unsafe_allow_html=True)
         
         with auth_tab2:
-            st.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='margin-top: 0.5rem;'></div>", unsafe_allow_html=True)
             
             reg_user = st.text_input(
-                "👤 Choose Account Number", 
+                "Account Number", 
                 key="reg_user", 
-                placeholder="Create your unique account number",
-                help="Choose a unique account identifier"
+                placeholder="Create your account number"
             )
             
             reg_pass = st.text_input(
-                "🔒 Choose Password", 
+                "Password", 
                 type="password", 
                 key="reg_pass", 
-                placeholder="Create a strong password",
-                help="Use a combination of letters, numbers, and special characters"
+                placeholder="Create a strong password"
             )
             
-            st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='margin-top: 1rem;'></div>", unsafe_allow_html=True)
             
-            if st.button("✨ Create Account", use_container_width=True, type="primary"):
+            if st.button("Create Account", use_container_width=True, type="primary"):
                 if not reg_user or not reg_pass:
                     st.warning("⚠️ Please enter both account number and password.")
                 else:
@@ -1033,34 +1065,13 @@ if not st.session_state.authenticated:
                         st.error(f"❌ {msg}")
             
             st.markdown("""
-                <div style='text-align: center; margin-top: 1.5rem;'>
-                    <p style='color: #999; font-size: 0.875rem;'>
-                        Already have an account? Switch to the Login tab above
-                    </p>
+                <div class="auth-link">
+                    Already have an account? Switch to the Login tab above
                 </div>
             """, unsafe_allow_html=True)
         
-        # Feature highlights
         st.markdown("""
-            <div style='margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e0e0e0;'>
-                <div style='display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center;'>
-                    <div>
-                        <div style='font-size: 2rem; margin-bottom: 0.5rem;'>📊</div>
-                        <div style='font-weight: 600; color: #333; font-size: 0.9rem;'>Smart Analysis</div>
-                        <div style='color: #666; font-size: 0.8rem; margin-top: 0.25rem;'>AI-powered insights</div>
-                    </div>
-                    <div>
-                        <div style='font-size: 2rem; margin-bottom: 0.5rem;'>🔒</div>
-                        <div style='font-weight: 600; color: #333; font-size: 0.9rem;'>Secure</div>
-                        <div style='color: #666; font-size: 0.8rem; margin-top: 0.25rem;'>Your data is safe</div>
-                    </div>
-                    <div>
-                        <div style='font-size: 2rem; margin-bottom: 0.5rem;'>⚡</div>
-                        <div style='font-weight: 600; color: #333; font-size: 0.9rem;'>Fast</div>
-                        <div style='color: #666; font-size: 0.8rem; margin-top: 0.25rem;'>Quick processing</div>
-                    </div>
                 </div>
-            </div>
             </div>
         """, unsafe_allow_html=True)
 
