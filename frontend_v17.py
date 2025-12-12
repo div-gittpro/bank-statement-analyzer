@@ -815,7 +815,7 @@ if not st.session_state.authenticated:
             padding-bottom: 2rem;
             max-width: 420px;
         }
-        .glass-card {
+        .glass-card-wrapper {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
@@ -829,6 +829,10 @@ if not st.session_state.authenticated:
             animation: slideUp 0.6s ease-out;
             position: relative;
             overflow: hidden;
+        }
+        .glass-card {
+            position: relative;
+            z-index: 1;
         }
         .glass-card::before {
             content: '';
@@ -991,6 +995,56 @@ if not st.session_state.authenticated:
         }
         [data-testid="stVerticalBlock"] > [style*="flex-direction: column"] > [data-testid="stVerticalBlock"] {
             gap: 0.5rem;
+        }
+        /* Style the middle column container as glass card */
+        section[data-testid="stSidebar"] + div .block-container > div > div:nth-child(2),
+        .main .block-container > div > div:nth-child(2),
+        div[data-testid="column"]:nth-of-type(2) {
+            background: rgba(255, 255, 255, 0.05) !important;
+            backdrop-filter: blur(20px) !important;
+            -webkit-backdrop-filter: blur(20px) !important;
+            border-radius: 20px !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+            padding: 2rem 2rem !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+        section[data-testid="stSidebar"] + div .block-container > div > div:nth-child(2)::before,
+        .main .block-container > div > div:nth-child(2)::before,
+        div[data-testid="column"]:nth-of-type(2)::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 255, 200, 0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+        section[data-testid="stSidebar"] + div .block-container > div > div:nth-child(2)::after,
+        .main .block-container > div > div:nth-child(2)::after,
+        div[data-testid="column"]:nth-of-type(2)::after {
+            content: '';
+            position: absolute;
+            top: -30%;
+            right: -30%;
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle, rgba(0, 200, 255, 0.1) 0%, transparent 70%);
+            animation: rotate 15s linear infinite reverse;
+            pointer-events: none;
+            z-index: 0;
+        }
+        section[data-testid="stSidebar"] + div .block-container > div > div:nth-child(2) > *,
+        .main .block-container > div > div:nth-child(2) > *,
+        div[data-testid="column"]:nth-of-type(2) > * {
+            position: relative;
+            z-index: 1;
         }
         </style>
     """, unsafe_allow_html=True)
