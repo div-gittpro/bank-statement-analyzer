@@ -881,7 +881,12 @@ if st.session_state.authenticated:
     selected_paths = []
 
     if "pdf_names" not in st.session_state:
-        st.session_state.pdf_names = {i['id']: i['filename'] for i in saved_items}
+        st.session_state.pdf_names = {}
+    
+    # Sync pdf_names with saved_items to include any newly uploaded PDFs
+    for i in saved_items:
+        if i['id'] not in st.session_state.pdf_names:
+            st.session_state.pdf_names[i['id']] = i['filename']
 
     with st.sidebar:
         st.markdown("### 📂 File Manager")
