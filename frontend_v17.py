@@ -24,73 +24,193 @@ st.set_page_config(
 # Custom CSS for better UI
 st.markdown("""
     <style>
-    /* Main theme colors */
+    /* Main theme colors with modern palette */
     :root {
         --primary-color: #4CAF50;
+        --primary-dark: #45a049;
+        --primary-light: #66bb6a;
         --secondary-color: #2196F3;
+        --secondary-dark: #1976d2;
         --danger-color: #f44336;
+        --warning-color: #ff9800;
+        --success-color: #4caf50;
+        --info-color: #2196f3;
+        --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --gradient-success: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        --gradient-secondary: linear-gradient(135deg, #2196F3 0%, #1976d2 100%);
+        --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+        --shadow-md: 0 4px 12px rgba(0,0,0,0.15);
+        --shadow-lg: 0 8px 24px rgba(0,0,0,0.2);
+        --shadow-xl: 0 12px 40px rgba(0,0,0,0.25);
     }
     
     /* Hide Streamlit branding */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+    header {visibility: hidden;}
     
-    /* Better card styling */
-    div[data-testid="stMetricValue"] {
-        font-size: 28px;
-        font-weight: 600;
+    /* Main container styling */
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
     }
     
-    /* Improved buttons */
+    /* Typography improvements */
+    h1, h2, h3 {
+        font-weight: 700 !important;
+        letter-spacing: -0.5px;
+    }
+    
+    h1 {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    /* Better card styling with modern shadows */
+    div[data-testid="stMetricValue"] {
+        font-size: 32px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    div[data-testid="stMetricLabel"] {
+        font-size: 14px;
+        font-weight: 600;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Improved buttons with gradients and animations */
     .stButton>button {
         width: 100%;
-        border-radius: 8px;
-        font-weight: 500;
-        transition: all 0.3s ease;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 16px;
+        padding: 0.75rem 1.5rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: none;
+        box-shadow: var(--shadow-md);
+        background: var(--gradient-success);
+        color: white;
     }
     
     .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-lg);
+        background: linear-gradient(135deg, #45a049 0%, #4CAF50 100%);
     }
     
-    /* Better tabs */
+    .stButton>button:active {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
+    }
+    
+    /* Secondary button styling */
+    button[kind="secondary"] {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%) !important;
+        color: #333 !important;
+    }
+    
+    button[kind="secondary"]:hover {
+        background: linear-gradient(135deg, #e8ecf1 0%, #b8c5d8 100%) !important;
+    }
+    
+    /* Better tabs with modern styling */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
+        gap: 12px;
+        background-color: #f8f9fa;
+        padding: 8px;
+        border-radius: 12px;
     }
     
     .stTabs [data-baseweb="tab"] {
-        border-radius: 8px 8px 0 0;
-        padding: 10px 20px;
+        border-radius: 10px;
+        padding: 12px 24px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        background-color: transparent;
     }
     
-    /* Improved expander */
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: rgba(76, 175, 80, 0.1);
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: var(--gradient-success) !important;
+        color: white !important;
+        box-shadow: var(--shadow-md);
+    }
+    
+    /* Improved expander with modern design */
     .streamlit-expanderHeader {
         font-weight: 600;
-        border-radius: 8px;
+        border-radius: 12px;
+        padding: 12px 16px;
+        background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+        border: 1px solid #e0e0e0;
+        transition: all 0.3s ease;
+    }
+    
+    .streamlit-expanderHeader:hover {
+        background: linear-gradient(135deg, #e8ecf1 0%, #f5f7fa 100%);
+        box-shadow: var(--shadow-sm);
+        transform: translateY(-1px);
     }
     
     /* Better dataframe styling */
     div[data-testid="stDataFrame"] {
-        border-radius: 8px;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid #e0e0e0;
     }
     
-    /* Sidebar dark theme */
+    /* Input fields styling */
+    .stTextInput>div>div>input,
+    .stTextArea>div>div>textarea,
+    .stSelectbox>div>div>select {
+        border-radius: 10px;
+        border: 2px solid #e0e0e0;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+        font-size: 15px;
+    }
+    
+    .stTextInput>div>div>input:focus,
+    .stTextArea>div>div>textarea:focus,
+    .stSelectbox>div>div>select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+        outline: none;
+    }
+    
+    /* Sidebar dark theme with modern gradients */
     section[data-testid="stSidebar"] {
-        background-color: #1e1e1e !important;
+        background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%) !important;
     }
     
     section[data-testid="stSidebar"] > div {
-        background-color: #1e1e1e !important;
+        background: transparent !important;
     }
     
-    /* Sidebar text colors for dark theme */
+    /* Sidebar text colors */
     section[data-testid="stSidebar"] .stMarkdown {
         color: #e0e0e0;
     }
     
     section[data-testid="stSidebar"] h3 {
         color: #4CAF50 !important;
+        font-weight: 700;
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
     
     section[data-testid="stSidebar"] p, 
@@ -100,41 +220,58 @@ st.markdown("""
     
     /* Sidebar expander styling */
     section[data-testid="stSidebar"] .streamlit-expanderHeader {
-        background-color: #2d2d2d !important;
+        background: linear-gradient(135deg, #2d2d44 0%, #1e1e2e 100%) !important;
         color: #e0e0e0 !important;
-        border-radius: 8px;
+        border-radius: 10px;
+        border: 1px solid #3d3d4d;
+        margin-bottom: 8px;
+        transition: all 0.3s ease;
     }
     
     section[data-testid="stSidebar"] .streamlit-expanderHeader:hover {
-        background-color: #3d3d3d !important;
+        background: linear-gradient(135deg, #3d3d54 0%, #2d2d44 100%) !important;
+        border-color: #4CAF50;
+        transform: translateX(4px);
+        box-shadow: var(--shadow-md);
     }
     
     section[data-testid="stSidebar"] .streamlit-expanderContent {
-        background-color: #252525 !important;
-        border: 1px solid #3d3d3d;
+        background: linear-gradient(135deg, #252538 0%, #1a1a2e 100%) !important;
+        border: 1px solid #3d3d4d;
+        border-radius: 8px;
+        padding: 12px;
+        margin-top: 4px;
     }
     
     /* Sidebar input fields */
     section[data-testid="stSidebar"] input {
-        background-color: #2d2d2d !important;
+        background-color: #2d2d44 !important;
         color: #e0e0e0 !important;
-        border: 1px solid #3d3d3d !important;
+        border: 2px solid #3d3d4d !important;
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
     }
     
     section[data-testid="stSidebar"] input:focus {
         border-color: #4CAF50 !important;
+        box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+        background-color: #35354a !important;
     }
     
     /* Sidebar buttons */
     section[data-testid="stSidebar"] .stButton>button {
-        background-color: #2d2d2d;
+        background: linear-gradient(135deg, #2d2d44 0%, #1e1e2e 100%);
         color: #e0e0e0;
-        border: 1px solid #3d3d3d;
+        border: 2px solid #3d3d4d;
+        border-radius: 10px;
+        transition: all 0.3s ease;
     }
     
     section[data-testid="stSidebar"] .stButton>button:hover {
-        background-color: #3d3d3d;
+        background: linear-gradient(135deg, #3d3d54 0%, #2d2d44 100%);
         border-color: #4CAF50;
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
     }
     
     /* Sidebar checkbox */
@@ -142,25 +279,130 @@ st.markdown("""
         color: #e0e0e0 !important;
     }
     
+    section[data-testid="stSidebar"] .stCheckbox label {
+        color: #e0e0e0 !important;
+        font-weight: 500;
+    }
+    
     /* Sidebar info boxes */
     section[data-testid="stSidebar"] .stInfo {
-        background-color: #2d2d2d !important;
+        background: linear-gradient(135deg, #2d2d44 0%, #252538 100%) !important;
         color: #b0b0b0 !important;
-        border: 1px solid #3d3d3d !important;
+        border: 1px solid #3d3d4d !important;
+        border-radius: 10px;
+        padding: 16px;
     }
     
     /* File uploader styling */
     div[data-testid="stFileUploader"] {
-        border: 2px dashed #4d4d4d;
-        border-radius: 8px;
-        padding: 20px;
-        background: #2d2d2d;
+        border: 3px dashed #4CAF50;
+        border-radius: 16px;
+        padding: 40px 20px;
+        background: linear-gradient(135deg, rgba(76, 175, 80, 0.05) 0%, rgba(33, 150, 243, 0.05) 100%);
+        transition: all 0.3s ease;
     }
     
-    /* Success/Warning/Error boxes */
-    .stSuccess, .stWarning, .stError, .stInfo {
-        border-radius: 8px;
-        padding: 12px;
+    div[data-testid="stFileUploader"]:hover {
+        border-color: #45a049;
+        background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(33, 150, 243, 0.1) 100%);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    /* Success/Warning/Error boxes with modern styling */
+    .stSuccess {
+        border-radius: 12px;
+        padding: 16px;
+        background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(76, 175, 80, 0.05) 100%);
+        border-left: 4px solid #4CAF50;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .stWarning {
+        border-radius: 12px;
+        padding: 16px;
+        background: linear-gradient(135deg, rgba(255, 152, 0, 0.1) 0%, rgba(255, 152, 0, 0.05) 100%);
+        border-left: 4px solid #ff9800;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .stError {
+        border-radius: 12px;
+        padding: 16px;
+        background: linear-gradient(135deg, rgba(244, 67, 54, 0.1) 0%, rgba(244, 67, 54, 0.05) 100%);
+        border-left: 4px solid #f44336;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .stInfo {
+        border-radius: 12px;
+        padding: 16px;
+        background: linear-gradient(135deg, rgba(33, 150, 243, 0.1) 0%, rgba(33, 150, 243, 0.05) 100%);
+        border-left: 4px solid #2196F3;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    /* Caption styling */
+    .stCaption {
+        color: #888;
+        font-size: 13px;
+        font-weight: 500;
+    }
+    
+    /* Divider styling */
+    hr {
+        border: none;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #e0e0e0, transparent);
+        margin: 2rem 0;
+    }
+    
+    /* Metric container improvements */
+    [data-testid="stMetricContainer"] {
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        padding: 24px;
+        border-radius: 16px;
+        border: 1px solid #e0e0e0;
+        box-shadow: var(--shadow-sm);
+        transition: all 0.3s ease;
+    }
+    
+    [data-testid="stMetricContainer"]:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+    
+    /* Selectbox improvements */
+    .stSelectbox label {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 8px;
+    }
+    
+    /* Checkbox improvements */
+    .stCheckbox label {
+        font-weight: 500;
+        color: #333;
+    }
+    
+    /* Smooth scrolling */
+    html {
+        scroll-behavior: smooth;
+    }
+    
+    /* Loading spinner improvements */
+    .stSpinner > div {
+        border-color: var(--primary-color) transparent transparent transparent;
+    }
+    
+    /* Download button styling */
+    .stDownloadButton>button {
+        background: var(--gradient-secondary) !important;
+        color: white !important;
+    }
+    
+    .stDownloadButton>button:hover {
+        background: linear-gradient(135deg, #1976d2 0%, #2196F3 100%) !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -800,26 +1042,64 @@ if "categories" not in st.session_state:
 # Auth UI
 # ──────────────────────────────────────────────────────────────────────────────
 if not st.session_state.authenticated:
-    # Center the login/register form
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # Center the login/register form with modern card design
+    col1, col2, col3 = st.columns([1, 2.5, 1])
     
     with col2:
         st.markdown("""
-            <div style='text-align: center; padding: 20px;'>
-                <h1 style='color: #4CAF50;'>💰 Bank Statement Analyzer</h1>
-                <p style='color: #666; font-size: 16px;'>Analyze your bank statements with ease</p>
+            <div style='
+                text-align: center; 
+                padding: 40px 20px; 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 24px;
+                box-shadow: 0 12px 40px rgba(102, 126, 234, 0.3);
+                margin-bottom: 30px;
+            '>
+                <div style='font-size: 64px; margin-bottom: 16px;'>💰</div>
+                <h1 style='
+                    color: white; 
+                    font-size: 2.5rem; 
+                    font-weight: 700;
+                    margin-bottom: 12px;
+                    text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                '>Bank Statement Analyzer</h1>
+                <p style='
+                    color: rgba(255,255,255,0.9); 
+                    font-size: 18px; 
+                    font-weight: 400;
+                    margin: 0;
+                '>Transform your financial data into actionable insights</p>
             </div>
         """, unsafe_allow_html=True)
         
-        auth_tab1, auth_tab2 = st.tabs(["🔑 Login", "📝 Register"])
+        # Modern card container for auth forms
+        st.markdown("""
+            <div style='
+                background: white;
+                border-radius: 20px;
+                padding: 40px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+                border: 1px solid #e0e0e0;
+            '>
+        """, unsafe_allow_html=True)
+        
+        auth_tab1, auth_tab2 = st.tabs(["🔑 Login", "✨ Register"])
         
         with auth_tab1:
             st.markdown("<br>", unsafe_allow_html=True)
-            log_user = st.text_input("Account Number", key="login_user", placeholder="Enter your account number")
-            log_pass = st.text_input("Password", type="password", key="login_pass", placeholder="Enter your password")
+            st.markdown("""
+                <div style='text-align: center; margin-bottom: 24px;'>
+                    <h3 style='color: #333; font-weight: 600; margin-bottom: 8px;'>Welcome Back!</h3>
+                    <p style='color: #666; font-size: 14px;'>Sign in to access your financial dashboard</p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            log_user = st.text_input("👤 Account Number", key="login_user", placeholder="Enter your account number")
+            st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
+            log_pass = st.text_input("🔒 Password", type="password", key="login_pass", placeholder="Enter your password")
             st.markdown("<br>", unsafe_allow_html=True)
             
-            if st.button("🚀 Login", use_container_width=True, type="primary"):
+            if st.button("🚀 Login to Dashboard", use_container_width=True, type="primary"):
                 if not log_user or not log_pass:
                     st.warning("⚠️ Please enter both account number and password.")
                 else:
@@ -835,8 +1115,16 @@ if not st.session_state.authenticated:
         
         with auth_tab2:
             st.markdown("<br>", unsafe_allow_html=True)
-            reg_user = st.text_input("Choose Account Number", key="reg_user", placeholder="Create your account number")
-            reg_pass = st.text_input("Choose Password", type="password", key="reg_pass", placeholder="Create a strong password")
+            st.markdown("""
+                <div style='text-align: center; margin-bottom: 24px;'>
+                    <h3 style='color: #333; font-weight: 600; margin-bottom: 8px;'>Create Your Account</h3>
+                    <p style='color: #666; font-size: 14px;'>Start analyzing your bank statements today</p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            reg_user = st.text_input("👤 Choose Account Number", key="reg_user", placeholder="Create your account number")
+            st.markdown("<div style='margin-top: 8px;'></div>", unsafe_allow_html=True)
+            reg_pass = st.text_input("🔒 Choose Password", type="password", key="reg_pass", placeholder="Create a strong password")
             st.markdown("<br>", unsafe_allow_html=True)
             
             if st.button("✨ Create Account", use_container_width=True, type="primary"):
@@ -849,6 +1137,8 @@ if not st.session_state.authenticated:
                         st.info("👉 Please switch to the Login tab to access your account.")
                     else:
                         st.error(f"❌ {msg}")
+        
+        st.markdown("</div>", unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Main App
@@ -856,23 +1146,54 @@ if not st.session_state.authenticated:
 if st.session_state.authenticated:
     user = st.session_state.username
     
-    # Header with user info and logout
-    col1, col2 = st.columns([4, 1])
-    with col1:
-        st.title("💰 Bank Statement Analyzer")
-    with col2:
-        st.markdown(f"""
-            <div style='text-align: right; padding-top: 10px;'>
-                <p style='color: #888; margin: 0; font-size: 12px;'>Logged in as</p>
-                <p style='font-weight: 600; margin: 0; font-size: 16px; color: #4CAF50;'>👤 {user}</p>
+    # Header with user info and logout - Modern design
+    st.markdown("""
+        <div style='
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px 40px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+        '>
+            <div style='display: flex; justify-content: space-between; align-items: center;'>
+                <div>
+                    <h1 style='
+                        color: white; 
+                        margin: 0; 
+                        font-size: 2.2rem;
+                        font-weight: 700;
+                        text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                    '>💰 Bank Statement Analyzer</h1>
+                    <p style='
+                        color: rgba(255,255,255,0.9); 
+                        margin: 8px 0 0 0;
+                        font-size: 16px;
+                    '>Your Financial Intelligence Dashboard</p>
+                </div>
+                <div style='text-align: right;'>
+                    <div style='
+                        background: rgba(255,255,255,0.2);
+                        padding: 12px 20px;
+                        border-radius: 12px;
+                        backdrop-filter: blur(10px);
+                        border: 1px solid rgba(255,255,255,0.3);
+                    '>
+                        <p style='color: rgba(255,255,255,0.8); margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;'>Logged in as</p>
+                        <p style='font-weight: 700; margin: 4px 0 0 0; font-size: 18px; color: white;'>👤 {user}</p>
+                    </div>
+                </div>
             </div>
-        """, unsafe_allow_html=True)
+        </div>
+    """.format(user=user), unsafe_allow_html=True)
+    
+    col1, col2 = st.columns([4, 1])
+    with col2:
         if st.button("🚪 Logout", use_container_width=True, key="header_logout"):
             st.session_state.authenticated = False
             st.session_state.username = ""
             st.rerun()
     
-    st.markdown("---")
+    st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
     
     # ────────────────────────────────────────────────
     # Sidebar - File Manager and Category Management
@@ -974,22 +1295,55 @@ if st.session_state.authenticated:
         
         st.markdown("---")
         st.markdown("""
-            <div style='text-align: center; padding: 12px; background: rgba(33, 150, 243, 0.1); border-radius: 8px;'>
-                <div style='font-size: 11px; color: #888;'>Need help?</div>
-                <div style='font-size: 10px; color: #666; margin-top: 4px;'>Supported: HDFC • IDBI • Axis • ADCB</div>
+            <div style='
+                text-align: center; 
+                padding: 20px; 
+                background: linear-gradient(135deg, rgba(33, 150, 243, 0.15) 0%, rgba(102, 126, 234, 0.15) 100%);
+                border-radius: 12px;
+                border: 1px solid rgba(33, 150, 243, 0.2);
+                box-shadow: 0 4px 12px rgba(33, 150, 243, 0.1);
+            '>
+                <div style='font-size: 24px; margin-bottom: 8px;'>💡</div>
+                <div style='font-size: 13px; font-weight: 600; color: #2196F3; margin-bottom: 8px;'>Need Help?</div>
+                <div style='font-size: 11px; color: #b0b0b0; line-height: 1.6; margin-top: 8px;'>
+                    Supported Banks:<br/>
+                    <span style='color: #4CAF50; font-weight: 600;'>✓ HDFC • IDBI • Axis • ADCB</span>
+                </div>
             </div>
         """, unsafe_allow_html=True)
     
     # ────────────────────────────────────────────────────────────────
     # Main content area
     
-    # Upload section with better styling
-    st.markdown("### 📤 Upload Bank Statements")
+    # Upload section with modern card design
+    st.markdown("""
+        <div style='
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            padding: 30px;
+            border-radius: 20px;
+            border: 2px dashed #4CAF50;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+        '>
+            <div style='text-align: center; margin-bottom: 20px;'>
+                <div style='font-size: 48px; margin-bottom: 12px;'>📤</div>
+                <h2 style='
+                    color: #333; 
+                    font-size: 1.8rem; 
+                    font-weight: 700;
+                    margin: 0;
+                '>Upload Bank Statements</h2>
+                <p style='color: #666; font-size: 14px; margin-top: 8px;'>
+                    Drag and drop your PDF files or click to browse
+                </p>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
     
     col1, col2 = st.columns([3, 1])
     with col1:
         uploaded_files = st.file_uploader(
-            "Drop your PDF files here or click to browse",
+            "📄 Select PDF files",
             type=["pdf"],
             accept_multiple_files=True,
             key="uploader_key",
@@ -997,11 +1351,23 @@ if st.session_state.authenticated:
         )
     with col2:
         st.markdown("""
-            <div style='padding: 20px; background: rgba(76, 175, 80, 0.1); border-radius: 8px; margin-top: 8px;'>
+            <div style='
+                padding: 24px; 
+                background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(33, 150, 243, 0.1) 100%); 
+                border-radius: 16px; 
+                margin-top: 8px;
+                border: 2px solid rgba(76, 175, 80, 0.2);
+                box-shadow: 0 4px 12px rgba(76, 175, 80, 0.1);
+            '>
                 <div style='text-align: center;'>
-                    <div style='font-size: 24px; font-weight: 600; color: #4CAF50;'>📁</div>
-                    <div style='font-size: 12px; color: #888; margin-top: 8px;'>Supported Banks</div>
-                    <div style='font-size: 11px; color: #666; margin-top: 4px;'>HDFC • IDBI<br/>Axis • ADCB</div>
+                    <div style='font-size: 32px; font-weight: 600; margin-bottom: 12px;'>📁</div>
+                    <div style='font-size: 14px; font-weight: 600; color: #4CAF50; margin-bottom: 8px;'>Supported Banks</div>
+                    <div style='font-size: 12px; color: #666; line-height: 1.6;'>
+                        ✓ HDFC<br/>
+                        ✓ IDBI<br/>
+                        ✓ Axis<br/>
+                        ✓ ADCB
+                    </div>
                 </div>
             </div>
         """, unsafe_allow_html=True)
@@ -1042,26 +1408,107 @@ if st.session_state.authenticated:
 
     st.markdown("---")
     
-    # Analysis section with better empty state
-    st.markdown("### 🔍 Analysis")
+    # Analysis section with modern design
+    st.markdown("""
+        <div style='
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            padding: 25px 30px;
+            border-radius: 16px;
+            margin-bottom: 25px;
+            border-left: 5px solid #4CAF50;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        '>
+            <h2 style='
+                color: #333; 
+                font-size: 1.6rem; 
+                font-weight: 700;
+                margin: 0;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            '>
+                <span style='font-size: 32px;'>🔍</span>
+                Analysis Dashboard
+            </h2>
+        </div>
+    """, unsafe_allow_html=True)
     
     if not selected_paths and "last_df" not in st.session_state:
-        st.info("""
-            ### 👋 Welcome to Bank Statement Analyzer!
-            
-            **Get started in 3 easy steps:**
-            
-            1. 📤 **Upload** your bank statement PDFs using the section above
-            2. 📂 **Select** files from the sidebar File Manager (they'll be checked automatically after upload)
-            3. ▶️ **Click** the Run Analysis button below
-            
-            Your financial insights are just a click away! 🚀
-        """)
+        st.markdown("""
+            <div style='
+                background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+                padding: 50px 30px;
+                border-radius: 20px;
+                text-align: center;
+                border: 2px dashed rgba(102, 126, 234, 0.3);
+                margin-bottom: 30px;
+            '>
+                <div style='font-size: 64px; margin-bottom: 20px;'>👋</div>
+                <h3 style='color: #333; font-size: 1.8rem; font-weight: 700; margin-bottom: 16px;'>
+                    Welcome to Bank Statement Analyzer!
+                </h3>
+                <p style='color: #666; font-size: 16px; margin-bottom: 30px; max-width: 600px; margin-left: auto; margin-right: auto;'>
+                    Transform your bank statements into powerful financial insights
+                </p>
+                <div style='
+                    display: flex;
+                    justify-content: center;
+                    gap: 30px;
+                    flex-wrap: wrap;
+                    margin-top: 40px;
+                '>
+                    <div style='
+                        background: white;
+                        padding: 24px;
+                        border-radius: 16px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                        min-width: 180px;
+                        transition: transform 0.3s ease;
+                    '>
+                        <div style='font-size: 36px; margin-bottom: 12px;'>📤</div>
+                        <div style='font-weight: 600; color: #333; margin-bottom: 8px;'>Step 1</div>
+                        <div style='font-size: 14px; color: #666;'>Upload PDFs</div>
+                    </div>
+                    <div style='
+                        background: white;
+                        padding: 24px;
+                        border-radius: 16px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                        min-width: 180px;
+                    '>
+                        <div style='font-size: 36px; margin-bottom: 12px;'>📂</div>
+                        <div style='font-weight: 600; color: #333; margin-bottom: 8px;'>Step 2</div>
+                        <div style='font-size: 14px; color: #666;'>Select Files</div>
+                    </div>
+                    <div style='
+                        background: white;
+                        padding: 24px;
+                        border-radius: 16px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                        min-width: 180px;
+                    '>
+                        <div style='font-size: 36px; margin-bottom: 12px;'>▶️</div>
+                        <div style='font-weight: 600; color: #333; margin-bottom: 8px;'>Step 3</div>
+                        <div style='font-size: 14px; color: #666;'>Run Analysis</div>
+                    </div>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
         if selected_paths:
-            st.success(f"✅ {len(selected_paths)} file(s) ready for analysis")
+            st.markdown(f"""
+                <div style='
+                    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(76, 175, 80, 0.05) 100%);
+                    padding: 16px 20px;
+                    border-radius: 12px;
+                    border-left: 4px solid #4CAF50;
+                    margin-top: 10px;
+                '>
+                    <span style='font-size: 18px; font-weight: 600; color: #4CAF50;'>✅ {len(selected_paths)} file(s) ready for analysis</span>
+                </div>
+            """, unsafe_allow_html=True)
         elif "last_df" in st.session_state:
             st.info("💡 Select files from the sidebar to analyze")
     with col2:
@@ -1094,22 +1541,86 @@ if st.session_state.authenticated:
                 df["Category"] = df["Remarks"].apply(lambda r: detect_category(r, st.session_state.categories))
                 st.session_state.last_df = df
 
-                # Quick stats at the top
-                st.markdown("### 📈 Summary")
+                # Quick stats at the top with modern card design
+                st.markdown("""
+                    <div style='
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        padding: 25px 30px;
+                        border-radius: 20px;
+                        margin-bottom: 30px;
+                        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+                    '>
+                        <h2 style='
+                            color: white; 
+                            font-size: 1.6rem; 
+                            font-weight: 700;
+                            margin: 0;
+                            display: flex;
+                            align-items: center;
+                            gap: 12px;
+                        '>
+                            <span style='font-size: 32px;'>📈</span>
+                            Financial Summary
+                        </h2>
+                    </div>
+                """, unsafe_allow_html=True)
+                
                 col1, col2, col3, col4 = st.columns(4)
                 
                 net_flow = total_credit - total_debit
                 transaction_count = len(df)
                 
                 with col1:
+                    st.markdown("""
+                        <div style='
+                            background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(76, 175, 80, 0.05) 100%);
+                            padding: 20px;
+                            border-radius: 16px;
+                            border-left: 5px solid #4CAF50;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                        '>
+                    """, unsafe_allow_html=True)
                     st.metric("💰 Total Credit", f"₹{total_credit:,.2f}", delta=None)
+                    st.markdown("</div>", unsafe_allow_html=True)
                 with col2:
+                    st.markdown("""
+                        <div style='
+                            background: linear-gradient(135deg, rgba(244, 67, 54, 0.1) 0%, rgba(244, 67, 54, 0.05) 100%);
+                            padding: 20px;
+                            border-radius: 16px;
+                            border-left: 5px solid #f44336;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                        '>
+                    """, unsafe_allow_html=True)
                     st.metric("💸 Total Debit", f"₹{total_debit:,.2f}", delta=None)
+                    st.markdown("</div>", unsafe_allow_html=True)
                 with col3:
                     delta_color = "normal" if net_flow >= 0 else "inverse"
+                    bg_gradient = "rgba(76, 175, 80, 0.1)" if net_flow >= 0 else "rgba(255, 152, 0, 0.1)"
+                    border_color = "#4CAF50" if net_flow >= 0 else "#ff9800"
+                    st.markdown(f"""
+                        <div style='
+                            background: linear-gradient(135deg, {bg_gradient} 0%, rgba(255,255,255,0.05) 100%);
+                            padding: 20px;
+                            border-radius: 16px;
+                            border-left: 5px solid {border_color};
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                        '>
+                    """, unsafe_allow_html=True)
                     st.metric("📊 Net Flow", f"₹{net_flow:,.2f}", delta=f"{'Positive' if net_flow >= 0 else 'Negative'}")
+                    st.markdown("</div>", unsafe_allow_html=True)
                 with col4:
+                    st.markdown("""
+                        <div style='
+                            background: linear-gradient(135deg, rgba(33, 150, 243, 0.1) 0%, rgba(33, 150, 243, 0.05) 100%);
+                            padding: 20px;
+                            border-radius: 16px;
+                            border-left: 5px solid #2196F3;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                        '>
+                    """, unsafe_allow_html=True)
                     st.metric("🧾 Transactions", f"{transaction_count:,}")
+                    st.markdown("</div>", unsafe_allow_html=True)
 
                 st.markdown("---")
 
