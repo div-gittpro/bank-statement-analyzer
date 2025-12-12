@@ -880,8 +880,14 @@ if st.session_state.authenticated:
     saved_items = get_saved_pdfs(user)
     selected_paths = []
 
+    # Initialize or update pdf_names to include all saved PDFs
     if "pdf_names" not in st.session_state:
-        st.session_state.pdf_names = {i['id']: i['filename'] for i in saved_items}
+        st.session_state.pdf_names = {}
+    
+    # Sync pdf_names with saved_items to include any new PDFs
+    for item in saved_items:
+        if item['id'] not in st.session_state.pdf_names:
+            st.session_state.pdf_names[item['id']] = item['filename']
 
     with st.sidebar:
         st.markdown("### 📂 File Manager")
@@ -891,7 +897,7 @@ if st.session_state.authenticated:
             st.markdown("<br>", unsafe_allow_html=True)
             
             for i in saved_items:
-                with st.expander(f"📄 {st.session_state.pdf_names[i['id']]}", expanded=False):
+                with st.expander(f"📄 {st.session_state.pdf_names.get(i['id'], i['filename'])}", expanded=False):
                     upload_date = i['uploaded_at'].split('T')[0]
                     st.caption(f"📅 Uploaded: {upload_date}")
                     
@@ -899,12 +905,13 @@ if st.session_state.authenticated:
                         selected_paths.append(i["filepath"])
                     
                     key_name = f"rename_{i['id']}"
+                    pdf_display_name = st.session_state.pdf_names.get(i['id'], i['filename'])
                     if key_name not in st.session_state:
-                        st.session_state[key_name] = st.session_state.pdf_names[i['id']]
+                        st.session_state[key_name] = pdf_display_name
 
                     def rename_callback(file_id=i['id'], key_name=key_name):
                         new_name = st.session_state[key_name].strip()
-                        if new_name and new_name != st.session_state.pdf_names[file_id]:
+                        if new_name and new_name != st.session_state.pdf_names.get(file_id, new_name):
                             st.session_state.pdf_names[file_id] = new_name
                             conn = get_db()
                             cur = conn.cursor()
@@ -919,14 +926,14 @@ if st.session_state.authenticated:
 
                     st.text_input(
                         "Rename file",
-                        value=st.session_state.pdf_names[i['id']],
+                        value=pdf_display_name,
                         key=key_name,
                         on_change=rename_callback
                     )
 
                     if st.button("🗑️ Delete", key=f"del_{i['id']}", use_container_width=True):
                         delete_pdf(i['id'])
-                        st.success(f"✅ Deleted {st.session_state.pdf_names[i['id']]}")
+                        st.success(f"✅ Deleted {pdf_display_name}")
                         st.session_state.pdf_names.pop(i['id'], None)
                         if key_name in st.session_state:
                             st.session_state.pop(key_name)
@@ -1001,6 +1008,20 @@ if st.session_state.authenticated:
             </div>
         """, unsafe_allow_html=True)
 
+    # Show success message if files were just uploaded (persists after rerun)
+    if "just_uploaded_files" in st.session_state and st.session_state.just_uploaded_files:
+        file_list = "\n".join([f"• {fname}" for fname in st.session_state.just_uploaded_files])
+        st.success(f"""
+            ✅ **Successfully saved {len(st.session_state.just_uploaded_files)} file(s)!**
+            
+            {file_list}
+            
+            👉 Files are now available in the File Manager (left sidebar)
+        """)
+        st.balloons()
+        # Clear the flag after showing the message
+        st.session_state.just_uploaded_files = None
+
     new_uploaded_paths = []
     if uploaded_files:
         if "saved_file_names" not in st.session_state:
@@ -1012,17 +1033,10 @@ if st.session_state.authenticated:
                 for f in unsaved_files:
                     st.session_state.saved_file_names.add(f.name)
             
-            # Success message with file list
-            file_list = "\n".join([f"• {f.name}" for f in unsaved_files])
-            st.success(f"""
-                ✅ **Successfully saved {len(new_uploaded_paths)} file(s)!**
-                
-                {file_list}
-                
-                👉 Files are now available in the File Manager (left sidebar)
-            """)
-        
-            st.balloons()
+            # Store uploaded file names in session state for display after rerun
+            st.session_state.just_uploaded_files = [f.name for f in unsaved_files]
+            # Refresh the page to show uploaded PDFs in sidebar automatically
+            st.rerun()
    
 
     if not selected_paths and new_uploaded_paths:
