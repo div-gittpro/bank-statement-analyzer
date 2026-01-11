@@ -586,6 +586,7 @@ def _legacy_parse_pdf_file(filepath: str, account_password: str):
     lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
     data = []
     last_balance = None
+    detected_bank = None
 
     TX_PATTERN = r"^(\d{2}/\d{2}/\d{2})\s+(.+?)\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})$"
     IDBI_PATTERN = r"^\d+\s+(\d{2}/\d{2}/\d{2})\s+\d{2}/\d{2}/\d{2}\s+(.+?)\s+(CR|DR)\s+INR\s+([\d,]+\.\d{2})\s+([\d,]+\.\d{2})$"
@@ -672,6 +673,7 @@ def _legacy_parse_pdf_file(filepath: str, account_password: str):
 
         m4 = re.match(ADCB_PATTERN, line)
         if m4:
+            detected_bank = "ADCB"
             post_date, value_date, desc, ref, debit_str, credit_str, bal_str = m4.groups()
             debit_val = clean_amt(debit_str)
             credit_val = clean_amt(credit_str)
@@ -698,7 +700,9 @@ def _legacy_parse_pdf_file(filepath: str, account_password: str):
                 "Type": tx_type,
                 "Balance": bal_val,
                 "Remarks": remarks,
-                "Source File": os.path.basename(filepath)
+                "Source File": os.path.basename(filepath),
+                "Bank": detected_bank,
+                "Currency": "AED"
             })
             last_balance = bal_val
             i += 1
@@ -736,6 +740,35 @@ def parse_many_pdfs(filepaths, account_password: str):
         "printed_debits": total_printed_debits if any_printed else None
     }
     return all_rows, aggregated
+
+# Currency helpers
+def detect_currency_symbol(rows, selected_paths=None):
+    """Best-effort currency detection; defaults to INR unless ADCB hints are present."""
+    path_text = " ".join([os.path.basename(p or "").lower() for p in (selected_paths or [])])
+    if "adcb" in path_text:
+        return "AED"
+
+    for r in rows:
+        if str(r.get("Currency", "")).upper() == "AED":
+            return "AED"
+        if str(r.get("Bank", "")).upper() == "ADCB":
+            return "AED"
+        remarks = str(r.get("Remarks", "")).upper()
+        if "ADCB" in remarks or re.search(r"\bAED\b", remarks):
+            return "AED"
+    return "₹"
+
+
+def format_money(amount, currency_symbol="₹", decimals=2):
+    """Format numbers with the chosen currency prefix."""
+    prefix = currency_symbol or "₹"
+    if prefix.isalpha() and not prefix.endswith(" "):
+        prefix = f"{prefix} "
+    fmt = f"{{:,.{decimals}f}}"
+    try:
+        return f"{prefix}{fmt.format(float(amount))}"
+    except Exception:
+        return f"{prefix}{fmt.format(0)}"
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Category detection
@@ -797,591 +830,255 @@ if "categories" not in st.session_state:
     st.session_state.categories = DEFAULT_CATEGORIES.copy()
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Auth UI
+# Auth UI — Winter Wonderland Theme
 # ──────────────────────────────────────────────────────────────────────────────
 if not st.session_state.authenticated:
-    # Glassmorphism design with dark theme
+    # Winter Wonderland login page with inline SVG background
     st.markdown("""
         <style>
+        /* Winter Wonderland Auth Page */
         .stApp {
-            background: #0a0a0a;
-            background-image: 
-                radial-gradient(circle at 20% 20%, rgba(0, 255, 200, 0.2) 0%, transparent 60%),
-                radial-gradient(circle at 80% 20%, rgba(0, 200, 255, 0.2) 0%, transparent 60%);
-            background-attachment: fixed;
+            background: linear-gradient(180deg, #0a0620 0%, #120a2a 40%, #1b1036 100%);
+            min-height: 100vh;
         }
         .main .block-container {
-            padding-top: 3rem;
-            padding-bottom: 3rem;
-            max-width: 480px;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            max-width: 100% !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
         }
-        /* Ensure the column container forms a complete glass cube */
-        .main .block-container > div[data-testid="column-container"] {
+        /* Hide sidebar on auth page */
+        section[data-testid="stSidebar"] { display: none !important; }
+        header[data-testid="stHeader"] { display: none !important; }
+        
+        .winter-container {
+            position: fixed;
+            inset: 0;
             display: flex;
-            gap: 1rem;
-        }
-        .glass-card-wrapper {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            padding: 2rem 2rem;
-            width: 100%;
-            animation: slideUp 0.6s ease-out;
-            position: relative;
+            align-items: center;
+            justify-content: center;
             overflow: hidden;
         }
-        .glass-card {
-            position: relative;
-            z-index: 1;
-        }
-        .glass-card::before {
-            content: '';
+        .winter-bg {
             position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(0, 255, 200, 0.1) 0%, transparent 70%);
-            animation: rotate 20s linear infinite;
-            pointer-events: none;
+            inset: 0;
+            z-index: 0;
         }
-        .glass-card::after {
-            content: '';
-            position: absolute;
-            top: -30%;
-            right: -30%;
-            width: 150%;
-            height: 150%;
-            background: radial-gradient(circle, rgba(0, 200, 255, 0.1) 0%, transparent 70%);
-            animation: rotate 15s linear infinite reverse;
-            pointer-events: none;
-        }
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .auth-content {
-            position: relative;
-            z-index: 1;
-        }
-        .auth-header {
-            text-align: left;
-            margin-bottom: 2rem;
-        }
-        .auth-header h1 {
-            font-size: 2rem;
-            font-weight: 600;
-            color: #ffffff;
-            margin-bottom: 0.5rem;
-            letter-spacing: -0.3px;
-            line-height: 1.2;
-        }
-        .auth-header p {
-            color: rgba(255, 255, 255, 0.65);
-            font-size: 0.95rem;
-            font-weight: 400;
-            margin: 0;
-            line-height: 1.4;
-        }
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 0;
-            background: transparent;
-            border-radius: 0;
-            padding: 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            margin-bottom: 2rem;
-        }
-        .stTabs [data-baseweb="tab"] {
-            border-radius: 0;
-            padding: 0.875rem 0;
-            font-weight: 500;
-            transition: all 0.3s ease;
-            color: rgba(255, 255, 255, 0.5);
-            background: transparent;
-            border-bottom: 2px solid transparent;
-            margin-right: 2.5rem;
-            font-size: 0.95rem;
-        }
-        .stTabs [aria-selected="true"] {
-            color: #ffffff;
-            border-bottom-color: #ff6b6b;
-            background: transparent;
-            font-weight: 600;
-        }
-        .stTabs [aria-selected="false"]:hover {
-            color: rgba(255, 255, 255, 0.8);
-        }
-        .stTextInput {
-            margin-bottom: 1.25rem;
-        }
-        .stTextInput>div>div>input {
-            border-radius: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 0.875rem 1.25rem;
-            font-size: 0.95rem;
-            transition: all 0.3s ease;
-            background-color: rgba(255, 255, 255, 0.04);
-            color: #ffffff;
-        }
-        .stTextInput>div>div>input::placeholder {
-            color: rgba(255, 255, 255, 0.35);
-        }
-        .stTextInput>div>div>input:focus {
-            border-color: rgba(0, 255, 200, 0.4);
-            box-shadow: 0 0 0 3px rgba(0, 255, 200, 0.08);
-            background-color: rgba(255, 255, 255, 0.06);
-            outline: none;
-        }
-        .stTextInput>div>div>input:hover {
-            border-color: rgba(255, 255, 255, 0.15);
-            background-color: rgba(255, 255, 255, 0.05);
-        }
-        .stTextInput label {
-            font-weight: 500;
-            color: rgba(255, 255, 255, 0.95);
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-        }
-        .stButton {
-            margin-top: 0.75rem;
-        }
-        .stButton>button {
-            background: linear-gradient(135deg, #00d4ff 0%, #00ffc8 100%);
-            color: #0a0a0a;
-            border: none;
-            border-radius: 14px;
-            padding: 0.875rem 2rem;
-            font-weight: 600;
-            font-size: 0.95rem;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 20px rgba(0, 255, 200, 0.25);
+        .winter-bg svg {
             width: 100%;
+            height: 100%;
         }
-        .stButton>button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 30px rgba(0, 255, 200, 0.35);
-            background: linear-gradient(135deg, #00c4ef 0%, #00e6b8 100%);
-        }
-        .auth-link {
-            text-align: center;
-            color: rgba(255, 255, 255, 0.6);
-            font-size: 0.8rem;
-        }
-        .auth-link a {
-            color: #00ffc8;
-            text-decoration: none;
-            font-weight: 500;
-        }
-        .auth-link a:hover {
-            text-decoration: underline;
-        }
-        .stSuccess, .stError, .stWarning, .stInfo {
-            background-color: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            color: #ffffff;
-            margin-top: 0.5rem;
-            margin-bottom: 0.5rem;
-        }
-        .element-container {
-            margin-bottom: 0.5rem;
-        }
-        [data-testid="stVerticalBlock"] > [style*="flex-direction: column"] > [data-testid="stVerticalBlock"] {
-            gap: 0.5rem;
-        }
-        /* Glass cube wrapper - matches Dribbble design exactly */
-        .glass-cube-wrapper {
-            background: rgba(255, 255, 255, 0.03) !important;
-            backdrop-filter: blur(30px) !important;
-            -webkit-backdrop-filter: blur(30px) !important;
-            border-radius: 24px !important;
-            border: 1px solid rgba(255, 255, 255, 0.08) !important;
-            box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.5),
-                inset 0 1px 0 rgba(255, 255, 255, 0.08),
-                inset 0 -1px 0 rgba(255, 255, 255, 0.03) !important;
-            padding: 2.5rem 2.5rem !important;
-            position: relative !important;
-            overflow: hidden !important;
-            margin: 0 auto !important;
-            width: 100% !important;
-            min-height: 400px !important;
-        }
-        .glass-cube-wrapper::before {
-            content: '';
+        .vignette {
             position: absolute;
-            top: -40%;
-            left: -40%;
-            width: 180%;
-            height: 180%;
-            background: radial-gradient(circle, rgba(0, 255, 200, 0.15) 0%, transparent 65%);
-            animation: rotate 25s linear infinite;
+            inset: 0;
             pointer-events: none;
-            z-index: 0;
-        }
-        .glass-cube-wrapper::after {
-            content: '';
-            position: absolute;
-            top: -40%;
-            right: -40%;
-            width: 180%;
-            height: 180%;
-            background: radial-gradient(circle, rgba(0, 200, 255, 0.15) 0%, transparent 65%);
-            animation: rotate 20s linear infinite reverse;
-            pointer-events: none;
-            z-index: 0;
-        }
-        .glass-cube-wrapper > * {
-            position: relative;
+            background: radial-gradient(40% 40% at 50% 10%, rgba(110,57,200,0.08), transparent 20%),
+                        radial-gradient(70% 50% at 50% 90%, rgba(0,0,0,0.45), transparent 30%);
             z-index: 1;
         }
-        /* Target the middle column and apply glass cube styling - matches Dribbble exactly */
-        .main .block-container > div[data-testid="column-container"] > div:nth-child(2),
-        .main .block-container > div > div:nth-child(2),
-        .main .block-container > div[data-testid="column-container"] > div:nth-of-type(2),
-        div.glass-cube-applied,
-        div[data-testid="column"]:nth-of-type(2),
-        .glass-cube-wrapper {
-            background: rgba(255, 255, 255, 0.03) !important;
-            backdrop-filter: blur(30px) !important;
-            -webkit-backdrop-filter: blur(30px) !important;
-            border-radius: 24px !important;
-            border: 1px solid rgba(255, 255, 255, 0.08) !important;
-            box-shadow: 
-                0 8px 32px rgba(0, 0, 0, 0.5),
-                inset 0 1px 0 rgba(255, 255, 255, 0.08),
-                inset 0 -1px 0 rgba(255, 255, 255, 0.03) !important;
-            padding: 2.5rem 2.5rem !important;
-            position: relative !important;
-            overflow: hidden !important;
-            margin: 0 !important;
-            box-sizing: border-box !important;
+        .login-card {
+            position: relative;
+            z-index: 10;
+            width: 420px;
+            max-width: 92vw;
+            padding: 34px 34px 28px;
+            border-radius: 30px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            box-shadow: 0 8px 40px rgba(10,8,24,0.55);
+            text-align: center;
+            color: white;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        .login-card .brand {
+            font-size: 26px;
+            font-weight: 700;
+            color: rgba(255,255,255,0.92);
+            letter-spacing: 0.2px;
+            margin-bottom: 6px;
+        }
+        .login-card .subtitle {
+            font-size: 13px;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 18px;
+        }
+        .login-card .footer-text {
+            font-size: 13px;
+            color: rgba(255,255,255,0.8);
+            margin-top: 14px;
+        }
+        .login-card .footer-text b {
+            font-weight: 700;
+            color: #fff;
+        }
+        
+        /* Override Streamlit form elements for Winter theme */
+        .winter-form .stTextInput > div > div > input {
+            background: transparent !important;
+            border: none !important;
+            border-bottom: 2px solid rgba(255,255,255,0.85) !important;
+            border-radius: 0 !important;
+            padding: 10px 4px 8px 0 !important;
+            color: rgba(255,255,255,0.95) !important;
+            font-size: 15px !important;
+        }
+        .winter-form .stTextInput > div > div > input:focus {
+            box-shadow: none !important;
+            border-bottom-color: #fff !important;
+        }
+        .winter-form .stTextInput > div > div > input::placeholder {
+            color: rgba(255,255,255,0.5) !important;
+        }
+        .winter-form .stTextInput label {
+            color: rgba(255,255,255,0.9) !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+        }
+        .winter-form .stButton > button {
+            background: #ffffff !important;
+            color: #031023 !important;
+            border: none !important;
+            border-radius: 999px !important;
+            padding: 14px 24px !important;
+            font-weight: 800 !important;
+            font-size: 15px !important;
+            box-shadow: 0 6px 18px rgba(3,16,35,0.25) !important;
             width: 100% !important;
+            margin-top: 8px !important;
         }
-        /* Animated backgrounds via CSS pseudo-elements - matches Dribbble design */
-        .main .block-container > div[data-testid="column-container"] > div:nth-child(2)::before,
-        .main .block-container > div > div:nth-child(2)::before,
-        div.glass-cube-applied::before,
-        div[data-testid="column"]:nth-of-type(2)::before,
-        .glass-cube-wrapper::before {
-            content: '';
-            position: absolute;
-            top: -40%;
-            left: -40%;
-            width: 180%;
-            height: 180%;
-            background: radial-gradient(circle, rgba(0, 255, 200, 0.15) 0%, transparent 65%);
-            animation: rotate 25s linear infinite;
-            pointer-events: none;
-            z-index: 0;
+        .winter-form .stButton > button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(3,16,35,0.35) !important;
         }
-        .main .block-container > div[data-testid="column-container"] > div:nth-child(2)::after,
-        .main .block-container > div > div:nth-child(2)::after,
-        div.glass-cube-applied::after,
-        div[data-testid="column"]:nth-of-type(2)::after,
-        .glass-cube-wrapper::after {
-            content: '';
-            position: absolute;
-            top: -40%;
-            right: -40%;
-            width: 180%;
-            height: 180%;
-            background: radial-gradient(circle, rgba(0, 200, 255, 0.15) 0%, transparent 65%);
-            animation: rotate 20s linear infinite reverse;
-            pointer-events: none;
-            z-index: 0;
+        .winter-form .stCheckbox label {
+            color: rgba(255,255,255,0.9) !important;
+            font-size: 13px !important;
         }
-        /* Ensure all content is above animated backgrounds */
-        .main .block-container > div[data-testid="column-container"] > div:nth-child(2) > *:not(.glass-bg-before):not(.glass-bg-after),
-        .main .block-container > div > div:nth-child(2) > *:not(.glass-bg-before):not(.glass-bg-after),
-        div.glass-cube-applied > *:not(.glass-bg-before):not(.glass-bg-after),
-        div[data-testid="column"]:nth-of-type(2) > *:not(.glass-bg-before):not(.glass-bg-after) {
-            position: relative !important;
-            z-index: 1 !important;
+        .options-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 8px 0 4px;
+        }
+        .options-row a {
+            color: rgba(255,255,255,0.9);
+            font-size: 13px;
+            text-decoration: none;
+        }
+        .options-row a:hover { text-decoration: underline; }
+        
+        /* Tabs styling for winter theme */
+        .winter-form .stTabs [data-baseweb="tab-list"] {
+            background: transparent !important;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            gap: 0;
+            margin-bottom: 18px;
+        }
+        .winter-form .stTabs [data-baseweb="tab"] {
+            color: rgba(255,255,255,0.55) !important;
+            background: transparent !important;
+            border-bottom: 2px solid transparent;
+            padding: 10px 0;
+            margin-right: 28px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .winter-form .stTabs [aria-selected="true"] {
+            color: #fff !important;
+            border-bottom-color: #fff !important;
         }
         </style>
-        <script>
-        // Enhanced function to create glass cube around ALL content
-        function createGlassCube() {
-            // First, try to find and style the glass-cube-wrapper
-            let targetContainer = document.querySelector('.glass-cube-wrapper');
-            
-            // If wrapper exists, style it to match Dribbble design exactly
-            if (targetContainer) {
-                if (!targetContainer.classList.contains('glass-cube-applied')) {
-                    targetContainer.classList.add('glass-cube-applied');
-                }
-                
-                // Apply exact Dribbble styling
-                Object.assign(targetContainer.style, {
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    backdropFilter: 'blur(30px)',
-                    WebkitBackdropFilter: 'blur(30px)',
-                    borderRadius: '24px',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -1px 0 rgba(255, 255, 255, 0.03)',
-                    padding: '2.5rem 2.5rem',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    margin: '0 auto',
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    minHeight: '400px'
-                });
-                
-                // Add animated backgrounds matching Dribbble
-                let bgBefore = targetContainer.querySelector('.glass-bg-before');
-                let bgAfter = targetContainer.querySelector('.glass-bg-after');
-                
-                if (!bgBefore) {
-                    bgBefore = document.createElement('div');
-                    bgBefore.className = 'glass-bg-before';
-                    Object.assign(bgBefore.style, {
-                        position: 'absolute',
-                        top: '-40%',
-                        left: '-40%',
-                        width: '180%',
-                        height: '180%',
-                        background: 'radial-gradient(circle, rgba(0, 255, 200, 0.15) 0%, transparent 65%)',
-                        animation: 'rotate 25s linear infinite',
-                        pointerEvents: 'none',
-                        zIndex: '0'
-                    });
-                    targetContainer.insertBefore(bgBefore, targetContainer.firstChild);
-                }
-                
-                if (!bgAfter) {
-                    bgAfter = document.createElement('div');
-                    bgAfter.className = 'glass-bg-after';
-                    Object.assign(bgAfter.style, {
-                        position: 'absolute',
-                        top: '-40%',
-                        right: '-40%',
-                        width: '180%',
-                        height: '180%',
-                        background: 'radial-gradient(circle, rgba(0, 200, 255, 0.15) 0%, transparent 65%)',
-                        animation: 'rotate 20s linear infinite reverse',
-                        pointerEvents: 'none',
-                        zIndex: '0'
-                    });
-                    targetContainer.appendChild(bgAfter);
-                }
-                
-                // Ensure all content is above backgrounds
-                Array.from(targetContainer.children).forEach(child => {
-                    if (child !== bgBefore && child !== bgAfter) {
-                        if (child.style) {
-                            child.style.position = 'relative';
-                            child.style.zIndex = '1';
-                        }
-                    }
-                });
-                
-                return; // Exit early if wrapper was found and styled
-            }
-            
-            // Fallback: Find and style the middle column container directly
-            if (!targetContainer) {
-                // Method 1: Find column container
-                const columnContainer = document.querySelector('.main .block-container > div[data-testid="column-container"]');
-                if (columnContainer) {
-                    const cols = columnContainer.children;
-                    if (cols.length >= 2) {
-                        targetContainer = cols[1]; // Middle column
-                    }
-                }
-                
-                // Method 2: Find by structure
-                if (!targetContainer) {
-                    const blockContainer = document.querySelector('.main .block-container');
-                    if (blockContainer) {
-                        const row = blockContainer.querySelector('div[data-testid="column-container"]') || blockContainer.children[0];
-                        if (row && row.children.length >= 2) {
-                            targetContainer = row.children[1];
-                        }
-                    }
-                }
-                
-                // Method 3: Find by content
-                if (!targetContainer) {
-                    const tabs = document.querySelector('.stTabs');
-                    if (tabs) {
-                        targetContainer = tabs.closest('div[data-testid="column"]') || tabs.parentElement.parentElement;
-                    }
-                }
-            }
-            
-            if (targetContainer) {
-                if (!targetContainer.classList.contains('glass-cube-applied')) {
-                    targetContainer.classList.add('glass-cube-applied');
-                }
-                
-                // Apply exact Dribbble styling
-                Object.assign(targetContainer.style, {
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    backdropFilter: 'blur(30px)',
-                    WebkitBackdropFilter: 'blur(30px)',
-                    borderRadius: '24px',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -1px 0 rgba(255, 255, 255, 0.03)',
-                    padding: '2.5rem 2.5rem',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    margin: '0',
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    minHeight: '400px'
-                });
-                
-                // Add animated backgrounds matching Dribbble
-                let bgBefore = targetContainer.querySelector('.glass-bg-before');
-                let bgAfter = targetContainer.querySelector('.glass-bg-after');
-                
-                if (!bgBefore) {
-                    bgBefore = document.createElement('div');
-                    bgBefore.className = 'glass-bg-before';
-                    Object.assign(bgBefore.style, {
-                        position: 'absolute',
-                        top: '-40%',
-                        left: '-40%',
-                        width: '180%',
-                        height: '180%',
-                        background: 'radial-gradient(circle, rgba(0, 255, 200, 0.15) 0%, transparent 65%)',
-                        animation: 'rotate 25s linear infinite',
-                        pointerEvents: 'none',
-                        zIndex: '0'
-                    });
-                    targetContainer.insertBefore(bgBefore, targetContainer.firstChild);
-                }
-                
-                if (!bgAfter) {
-                    bgAfter = document.createElement('div');
-                    bgAfter.className = 'glass-bg-after';
-                    Object.assign(bgAfter.style, {
-                        position: 'absolute',
-                        top: '-40%',
-                        right: '-40%',
-                        width: '180%',
-                        height: '180%',
-                        background: 'radial-gradient(circle, rgba(0, 200, 255, 0.15) 0%, transparent 65%)',
-                        animation: 'rotate 20s linear infinite reverse',
-                        pointerEvents: 'none',
-                        zIndex: '0'
-                    });
-                    targetContainer.appendChild(bgAfter);
-                }
-                
-                // Ensure all content is above backgrounds
-                Array.from(targetContainer.children).forEach(child => {
-                    if (child !== bgBefore && child !== bgAfter) {
-                        if (child.style) {
-                            child.style.position = 'relative';
-                            child.style.zIndex = '1';
-                        }
-                    }
-                });
-            }
-        }
         
-        // More aggressive function to ensure glass cube wraps everything
-        function initGlassCube() {
-            createGlassCube();
-            // Try multiple times with delays
-            setTimeout(createGlassCube, 50);
-            setTimeout(createGlassCube, 150);
-            setTimeout(createGlassCube, 300);
-            setTimeout(createGlassCube, 500);
-            setTimeout(createGlassCube, 800);
-            setTimeout(createGlassCube, 1200);
-        }
-        
-        // Run immediately
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() {
-                initGlassCube();
-                // Keep trying
-                setInterval(createGlassCube, 2000);
-            });
-        } else {
-            initGlassCube();
-            // Keep trying
-            setInterval(createGlassCube, 2000);
-        }
-        
-        // Watch for any DOM changes
-        const observer = new MutationObserver(function(mutations) {
-            let shouldUpdate = false;
-            mutations.forEach(function(mutation) {
-                if (mutation.addedNodes.length > 0 || mutation.removedNodes.length > 0) {
-                    shouldUpdate = true;
-                }
-            });
-            if (shouldUpdate) {
-                setTimeout(createGlassCube, 100);
-            }
-        });
-        
-        // Observe the entire document
-        observer.observe(document.body, { 
-            childList: true, 
-            subtree: true,
-            attributes: false
-        });
-        
-        // Also listen for Streamlit events
-        window.addEventListener('load', initGlassCube);
-        document.addEventListener('streamlit:render', initGlassCube);
-        </script>
+        <div class="winter-container">
+            <div class="winter-bg" aria-hidden="true">
+                <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="sky" x1="0" x2="0" y1="0" y2="1">
+                            <stop offset="0%" stop-color="#20103a"/>
+                            <stop offset="50%" stop-color="#2e1750"/>
+                            <stop offset="100%" stop-color="#1a0c2a"/>
+                        </linearGradient>
+                        <linearGradient id="mountGrad" x1="0" x2="1">
+                            <stop offset="0%" stop-color="#4b2f7a"/>
+                            <stop offset="100%" stop-color="#2b1444"/>
+                        </linearGradient>
+                        <linearGradient id="snow" x1="0" x2="0">
+                            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.98"/>
+                            <stop offset="100%" stop-color="#f6f7ff" stop-opacity="0.9"/>
+                        </linearGradient>
+                        <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+                            <feGaussianBlur stdDeviation="18" result="b"/>
+                            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                        </filter>
+                    </defs>
+                    <rect width="1600" height="900" fill="url(#sky)" />
+                    <g transform="translate(0,80) scale(1.05)">
+                        <path d="M0 700 L200 420 L340 620 L520 380 L700 680 L900 420 L1120 740 L1400 420 L1600 700 L1600 900 L0 900 Z" fill="url(#mountGrad)" opacity="0.95"/>
+                        <path d="M200 420 L240 412 L260 430 L220 448 Z" fill="url(#snow)" opacity="0.95"/>
+                        <path d="M520 380 L560 360 L600 384 L540 412 Z" fill="url(#snow)" opacity="0.95"/>
+                    </g>
+                    <g transform="translate(0,160)">
+                        <path d="M0 760 L160 520 L360 760 L540 480 L760 760 L920 520 L1200 760 L1600 500 L1600 900 L0 900 Z" fill="#351b5e" opacity="0.85"/>
+                        <path d="M540 480 L620 456 L660 486 L590 512 Z" fill="url(#snow)" opacity="0.95"/>
+                    </g>
+                    <g transform="translate(80,380) scale(1.1)" fill="#07222a">
+                        <path d="M40 200 L80 120 L120 200 L95 200 L95 260 L65 260 L65 200 Z"/>
+                        <path d="M60 160 L90 95 L120 160 Z" fill="#06323a"/>
+                        <path d="M60 200 L90 145 L120 200 Z" fill="#0b3e46"/>
+                    </g>
+                    <g transform="translate(980,520) scale(0.9)">
+                        <rect x="-30" y="-10" width="180" height="90" rx="10" fill="#2b1a3c" stroke="#3a274e" stroke-width="2"/>
+                        <rect x="10" y="10" width="60" height="40" rx="4" fill="#3b2a4a"/>
+                        <rect x="78" y="14" width="28" height="28" rx="3" fill="#ffd08a" opacity="0.98"/>
+                        <circle cx="92" cy="28" r="26" fill="#ffd08a" opacity="0.08" filter="url(#softGlow)"/>
+                        <path d="M-30 -10 L60 -40 L150 -10 L120 -10 L60 -30 L0 -10 Z" fill="url(#snow)" opacity="0.95"/>
+                    </g>
+                    <g transform="translate(1230,420) scale(1.2)">
+                        <path d="M40 200 L80 100 L120 200 L95 200 L95 260 L65 260 L65 200 Z" fill="#05232a"/>
+                        <path d="M60 150 L90 90 L120 150 Z" fill="#06323a"/>
+                    </g>
+                    <g fill="#ffffff" opacity="0.9">
+                        <circle cx="260" cy="120" r="1.6" opacity="0.8"/>
+                        <circle cx="480" cy="60" r="2.6" opacity="0.7"/>
+                        <circle cx="640" cy="140" r="1.8" opacity="0.6"/>
+                        <circle cx="900" cy="90" r="2.0" opacity="0.8"/>
+                        <circle cx="1160" cy="60" r="1.4" opacity="0.6"/>
+                        <circle cx="1400" cy="160" r="1.8" opacity="0.7"/>
+                    </g>
+                </svg>
+            </div>
+            <div class="vignette"></div>
+        </div>
     """, unsafe_allow_html=True)
     
-    # Main container with centered glass card
-    col1, col2, col3 = st.columns([1, 1, 1])
+    # Centered login card using Streamlit columns
+    col1, col2, col3 = st.columns([1, 1.2, 1])
     
     with col2:
-        # Glass cube wrapper - will be styled by JavaScript
-        st.markdown("""
-            <div class="glass-cube-wrapper">
-                <div class="auth-content">
-                    <div class="auth-header">
-                        <h1>Welcome back</h1>
-                        <p>Sign in to your account</p>
-                    </div>
-        """, unsafe_allow_html=True)
+        st.markdown('<div class="login-card"><div class="brand">Login</div><div class="subtitle">Welcome back — sign in to continue</div></div>', unsafe_allow_html=True)
+        
+        # Wrap form in winter-form class
+        st.markdown('<div class="winter-form">', unsafe_allow_html=True)
         
         auth_tab1, auth_tab2 = st.tabs(["Login", "Register"])
         
         with auth_tab1:
-            log_user = st.text_input(
-                "Account Number", 
-                key="login_user", 
-                placeholder="Enter your account number"
-            )
+            log_user = st.text_input("UID", key="login_user", placeholder="Enter your UID")
+            log_pass = st.text_input("Password", type="password", key="login_pass", placeholder="••••••••")
             
-            log_pass = st.text_input(
-                "Password", 
-                type="password", 
-                key="login_pass", 
-                placeholder="Enter your password"
-            )
+            # Options row
+            col_a, col_b = st.columns([1, 1])
+            with col_a:
+                st.checkbox("Remember Me", key="remember_me")
+            with col_b:
+                st.markdown('<div style="text-align:right;padding-top:8px;"><a href="#" style="color:rgba(255,255,255,0.9);font-size:13px;text-decoration:none;">Forget Password</a></div>', unsafe_allow_html=True)
             
-            if st.button("Sign In", use_container_width=True, type="primary"):
+            if st.button("Log in", use_container_width=True, type="primary", key="login_btn"):
                 if not log_user or not log_pass:
-                    st.warning("⚠️ Please enter both account number and password.")
+                    st.warning("⚠️ Please enter both email and password.")
                 else:
                     ok, msg = login_user_db(log_user.strip(), log_pass.strip())
                     if ok:
@@ -1393,47 +1090,26 @@ if not st.session_state.authenticated:
                     else:
                         st.error(f"❌ {msg}")
             
-            st.markdown("""
-                <div class="auth-link" style="margin-top: 1rem;">
-                    Don't have an account? Switch to the Register tab above
-                </div>
-            """, unsafe_allow_html=True)
+            st.markdown('<div class="footer-text">Don\'t have an account? <b>Register</b></div>', unsafe_allow_html=True)
         
         with auth_tab2:
-            reg_user = st.text_input(
-                "Account Number", 
-                key="reg_user", 
-                placeholder="Create your account number"
-            )
+            reg_user = st.text_input("UID", key="reg_user", placeholder="Create your UID")
+            reg_pass = st.text_input("Password", type="password", key="reg_pass", placeholder="Create a strong password")
             
-            reg_pass = st.text_input(
-                "Password", 
-                type="password", 
-                key="reg_pass", 
-                placeholder="Create a strong password"
-            )
-            
-            if st.button("Create Account", use_container_width=True, type="primary"):
+            if st.button("Create Account", use_container_width=True, type="primary", key="register_btn"):
                 if not reg_user or not reg_pass:
-                    st.warning("⚠️ Please enter both account number and password.")
+                    st.warning("⚠️ Please enter both UID and password.")
                 else:
                     ok, msg = register_user_db(reg_user.strip(), reg_pass.strip())
                     if ok:
                         st.success(f"✅ {msg}")
-                        st.info("👉 Please switch to the Login tab to access your account.")
+                        st.info("👉 Switch to the Login tab to sign in.")
                     else:
                         st.error(f"❌ {msg}")
             
-            st.markdown("""
-                <div class="auth-link" style="margin-top: 1rem;">
-                    Already have an account? Switch to the Login tab above
-                </div>
-            """, unsafe_allow_html=True)
+            st.markdown('<div class="footer-text">Already have an account? <b>Login</b></div>', unsafe_allow_html=True)
         
-        st.markdown("""
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)  # close winter-form
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Main App
@@ -1456,6 +1132,9 @@ if st.session_state.authenticated:
             st.session_state.authenticated = False
             st.session_state.username = ""
             st.rerun()
+
+    currency_symbol = st.session_state.get("currency_symbol", "₹")
+    currency_label = currency_symbol.strip() or currency_symbol
     
     st.markdown("---")
     
@@ -1537,7 +1216,7 @@ if st.session_state.authenticated:
                 cat_df = df[df["Category"] == cat]
                 if not cat_df.empty:
                     total_amt = cat_df["Amount"].sum()
-                    with st.expander(f"{cat} • ₹{total_amt:,.0f} ({len(cat_df)})", expanded=False):
+                    with st.expander(f"{cat} • {format_money(total_amt, currency_symbol, decimals=0)} ({len(cat_df)})", expanded=False):
                         st.dataframe(
                             cat_df[["Date", "Amount", "Type", "Remarks"]].head(10), 
                             use_container_width=True, 
@@ -1551,11 +1230,18 @@ if st.session_state.authenticated:
             new_cat = st.text_input("New Category", placeholder="e.g., Entertainment")
             new_kw = st.text_input("Keyword", placeholder="e.g., cinema")
             if st.button("💾 Add Category/Keyword", use_container_width=True):
-                if new_cat and new_kw:
-                    if new_cat not in st.session_state.categories:
-                        st.session_state.categories.append(new_cat)
-                    DEFAULT_CATEGORY_KEYWORDS.setdefault(new_cat, []).append(new_kw.lower())
-                    st.success(f"✅ Added '{new_kw}' to '{new_cat}'")
+                cat_clean = new_cat.strip()
+                kw_clean = new_kw.strip().lower()
+                if cat_clean and kw_clean:
+                    if cat_clean not in st.session_state.categories:
+                        st.session_state.categories.append(cat_clean)
+                    DEFAULT_CATEGORY_KEYWORDS.setdefault(cat_clean, []).append(kw_clean)
+
+                    if "last_df" in st.session_state:
+                        st.session_state.last_df["Category"] = st.session_state.last_df["Remarks"].apply(
+                            lambda r: detect_category(r, st.session_state.categories)
+                        )
+                    st.success(f"✅ Added '{kw_clean}' to '{cat_clean}' and refreshed categories")
                 else:
                     st.warning("⚠️ Please enter both fields.")
         
@@ -1660,11 +1346,25 @@ if st.session_state.authenticated:
         if not selected_paths:
             st.warning("⚠️ Please select PDFs from the sidebar or upload new files.")
         else:
+            # Build mapping from original filename to display name
+            filename_to_display = {}
+            for item in saved_items:
+                orig_name = os.path.basename(item['filepath'])
+                display_name = st.session_state.pdf_names.get(item['id'], item['filename'])
+                filename_to_display[orig_name] = display_name
+
             with st.spinner("🔄 Parsing statements... This may take a moment."):
                 rows, printed_totals = parse_many_pdfs(selected_paths, account_password=user)
             
             if rows:
+                currency_symbol = detect_currency_symbol(rows, selected_paths)
+                currency_label = currency_symbol.strip() or currency_symbol
+                st.session_state.currency_symbol = currency_symbol
+
                 df = pd.DataFrame(rows)
+                
+                # Map Source File to display names
+                df["Source File"] = df["Source File"].apply(lambda x: filename_to_display.get(x, x))
 
                 # Use printed totals if available; otherwise fall back to computed totals
                 printed_credits = printed_totals.get("printed_credits")
@@ -1689,12 +1389,12 @@ if st.session_state.authenticated:
                 transaction_count = len(df)
                 
                 with col1:
-                    st.metric("💰 Total Credit", f"₹{total_credit:,.2f}", delta=None)
+                    st.metric("💰 Total Credit", format_money(total_credit, currency_symbol), delta=None)
                 with col2:
-                    st.metric("💸 Total Debit", f"₹{total_debit:,.2f}", delta=None)
+                    st.metric("💸 Total Debit", format_money(total_debit, currency_symbol), delta=None)
                 with col3:
                     delta_color = "normal" if net_flow >= 0 else "inverse"
-                    st.metric("📊 Net Flow", f"₹{net_flow:,.2f}", delta=f"{'Positive' if net_flow >= 0 else 'Negative'}")
+                    st.metric("📊 Net Flow", format_money(net_flow, currency_symbol), delta=f"{'Positive' if net_flow >= 0 else 'Negative'}")
                 with col4:
                     st.metric("🧾 Transactions", f"{transaction_count:,}")
 
@@ -1757,7 +1457,7 @@ if st.session_state.authenticated:
                     display_df.loc[display_df["Date"].isna(), "Date_display"] = display_df.loc[display_df["Date"].isna(), "Date"].astype(str)
 
                     # Keep the existing columns but use the safe Date_display
-                    display_df = display_df.assign(Amount=display_df["Amount"].apply(lambda x: f"₹{x:,.2f}"))
+                    display_df = display_df.assign(Amount=display_df["Amount"].apply(lambda x: format_money(x, currency_symbol)))
                     display_df = display_df.sort_values("Date", ascending=False)
 
                     # Show simple message if no records
@@ -1782,9 +1482,9 @@ if st.session_state.authenticated:
                         with col1:
                             st.caption(f"📊 Showing {len(filtered_df)} of {len(df)} transactions")
                         with col2:
-                            st.caption(f"💰 Filtered Credit: ₹{filtered_credit:,.2f}")
+                            st.caption(f"💰 Filtered Credit: {format_money(filtered_credit, currency_symbol)}")
                         with col3:
-                            st.caption(f"💸 Filtered Debit: ₹{filtered_debit:,.2f}")
+                            st.caption(f"💸 Filtered Debit: {format_money(filtered_debit, currency_symbol)}")
                     else:
                         st.info("No transactions match your filters.")
                 
@@ -1800,7 +1500,7 @@ if st.session_state.authenticated:
                     # Format for display
                     file_summary_display = file_summary.copy()
                     for col in ["Total_Credit", "Total_Debit", "Net_Flow"]:
-                        file_summary_display[col] = file_summary_display[col].apply(lambda x: f"₹{x:,.2f}")
+                        file_summary_display[col] = file_summary_display[col].apply(lambda x: format_money(x, currency_symbol))
                     
                     st.dataframe(file_summary_display, use_container_width=True)
                     
@@ -1822,7 +1522,7 @@ if st.session_state.authenticated:
                         barmode='group',
                         title="Credit vs Debit by File",
                         xaxis_title="File",
-                        yaxis_title="Amount (₹)",
+                        yaxis_title=f"Amount ({currency_label})",
                         height=400
                     )
                     st.plotly_chart(fig, use_container_width=True)
@@ -1837,7 +1537,7 @@ if st.session_state.authenticated:
                     monthly_display = monthly_summary.copy()
                     monthly_display.index = monthly_display.index.astype(str)
                     for col in monthly_display.columns:
-                        monthly_display[col] = monthly_display[col].apply(lambda x: f"₹{x:,.2f}")
+                        monthly_display[col] = monthly_display[col].apply(lambda x: format_money(x, currency_symbol))
                     st.dataframe(monthly_display, use_container_width=True)
                     
                     # Line chart
@@ -1859,7 +1559,7 @@ if st.session_state.authenticated:
                     fig.update_layout(
                         title="Monthly Credit & Debit Trends",
                         xaxis_title="Month",
-                        yaxis_title="Amount (₹)",
+                        yaxis_title=f"Amount ({currency_label})",
                         height=400,
                         hovermode='x unified'
                     )
@@ -1903,10 +1603,10 @@ if st.session_state.authenticated:
                     # Detailed category table
                     st.markdown("##### Category Details")
                     category_display = category_summary.copy()
-                    category_display["Total"] = category_display["Total"].apply(lambda x: f"₹{x:,.2f}")
+                    category_display["Total"] = category_display["Total"].apply(lambda x: format_money(x, currency_symbol))
                     category_display["Avg_Per_Transaction"] = (
                         category_summary["Total"] / category_summary["Count"]
-                    ).apply(lambda x: f"₹{x:,.2f}")
+                    ).apply(lambda x: format_money(x, currency_symbol))
                     st.dataframe(category_display, use_container_width=True)
                 
                 with tab5:
@@ -1932,7 +1632,7 @@ if st.session_state.authenticated:
                                         {row['Date'].strftime('%d %B %Y') if not pd.isna(row['Date']) else ''}
                                     </div>
                                     <div style='font-size: 18px; font-weight: 600; margin-bottom: 8px;'>
-                                        {"🟢" if row['Type'] == "CR" else "🔴"} ₹{row['Amount']:,.2f}
+                                        {"🟢" if row['Type'] == "CR" else "🔴"} {format_money(row['Amount'], currency_symbol)}
                                     </div>
                                     <div style='font-size: 12px; background: rgba(0,0,0,0.1); 
                                         display: inline-block; padding: 4px 8px; border-radius: 4px; margin-bottom: 8px;'>
@@ -1961,7 +1661,7 @@ if st.session_state.authenticated:
             else:
                 st.error("❌ No valid transactions found. Please check your PDF format.")
     
-    # Show helpful message when no files selected
+    # Show helpful message when no files selected and no cached data
     elif not selected_paths and "last_df" not in st.session_state:
         st.markdown("""
             <div style='text-align: center; padding: 60px 20px; background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(33, 150, 243, 0.1) 100%); border-radius: 12px; margin-top: 30px;'>
@@ -1987,6 +1687,198 @@ if st.session_state.authenticated:
             </div>
         """, unsafe_allow_html=True)
     
-    # Show previous analysis if available but no new files selected
-    elif "last_df" in st.session_state:
-        st.info("💡 Your previous analysis is shown below. Select files from the sidebar and click 'Run Analysis' to update.") 
+    # Display cached analysis if available (persists across sidebar interactions)
+    if "last_df" in st.session_state and not run_btn:
+        df = st.session_state.last_df
+        
+        # Re-compute totals from cached df
+        total_credit = df[df["Type"] == "CR"]["Amount"].sum()
+        total_debit = df[df["Type"] == "DR"]["Amount"].sum()
+        net_flow = total_credit - total_debit
+        transaction_count = len(df)
+        
+        # Quick stats at the top
+        st.markdown("### 📈 Summary")
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("💰 Total Credit", format_money(total_credit, currency_symbol), delta=None)
+        with col2:
+            st.metric("💸 Total Debit", format_money(total_debit, currency_symbol), delta=None)
+        with col3:
+            st.metric("📊 Net Flow", format_money(net_flow, currency_symbol), delta=f"{'Positive' if net_flow >= 0 else 'Negative'}")
+        with col4:
+            st.metric("🧾 Transactions", f"{transaction_count:,}")
+
+        st.markdown("---")
+
+        # Detailed tabs
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+            "📋 All Transactions", 
+            "📂 By File", 
+            "📆 Monthly Trends",
+            "📊 Category Analysis",
+            "🏆 Top Transactions"
+        ])
+        
+        with tab1:
+            st.markdown("#### Transaction History")
+            
+            # Search and Filters
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                search_term = st.text_input("🔍 Search transactions", placeholder="Search by remarks...", key="cached_search")
+            with col2:
+                st.write("")  # Spacer
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                filter_type = st.selectbox("Transaction Type", ["All", "Credit", "Debit"], key="cached_filter_type")
+            with col2:
+                categories_list = ["All"] + sorted(df["Category"].unique().tolist())
+                filter_category = st.selectbox("Category", categories_list, key="cached_filter_cat")
+            with col3:
+                filter_file = st.selectbox("Source File", ["All"] + df["Source File"].unique().tolist(), key="cached_filter_file")
+            
+            # Apply filters
+            filtered_df = df.copy()
+            
+            # Search filter
+            if search_term:
+                filtered_df = filtered_df[
+                    filtered_df["Remarks"].str.contains(search_term, case=False, na=False)
+                ]
+            
+            if filter_type != "All":
+                filtered_df = filtered_df[filtered_df["Type"] == ("CR" if filter_type == "Credit" else "DR")]
+            if filter_category != "All":
+                filtered_df = filtered_df[filtered_df["Category"] == filter_category]
+            if filter_file != "All":
+                filtered_df = filtered_df[filtered_df["Source File"] == filter_file]
+            
+            # Format display dataframe
+            display_df = filtered_df.copy()
+            display_df["Date"] = pd.to_datetime(display_df["Date"], errors="coerce")
+            display_df["Date_display"] = display_df["Date"].dt.strftime("%d %b %Y")
+            display_df.loc[display_df["Date"].isna(), "Date_display"] = display_df.loc[display_df["Date"].isna(), "Date"].astype(str)
+            display_df = display_df.assign(Amount=display_df["Amount"].apply(lambda x: format_money(x, currency_symbol)))
+            display_df = display_df.sort_values("Date", ascending=False)
+
+            if display_df.empty:
+                st.info("No transactions to show for the selected filters.")
+            else:
+                try:
+                    st.dataframe(
+                        display_df[["Date_display", "Amount", "Type", "Category", "Remarks", "Source File"]],
+                        use_container_width=True,
+                        height=500
+                    )
+                except Exception:
+                    st.table(display_df[["Date_display", "Amount", "Type", "Category", "Remarks", "Source File"]].head(200))
+            
+            # Summary of filtered results
+            if len(filtered_df) > 0:
+                filtered_credit = filtered_df[filtered_df["Type"] == "CR"]["Amount"].sum()
+                filtered_debit = filtered_df[filtered_df["Type"] == "DR"]["Amount"].sum()
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.caption(f"📊 Showing {len(filtered_df)} of {len(df)} transactions")
+                with col2:
+                    st.caption(f"💰 Filtered Credit: {format_money(filtered_credit, currency_symbol)}")
+                with col3:
+                    st.caption(f"💸 Filtered Debit: {format_money(filtered_debit, currency_symbol)}")
+            else:
+                st.info("No transactions match your filters.")
+        
+        with tab2:
+            st.markdown("#### Summary by File")
+            file_summary = df.groupby("Source File").agg(
+                Total_Credit=("Amount", lambda x: x[df.loc[x.index, "Type"] == "CR"].sum()),
+                Total_Debit=("Amount", lambda x: x[df.loc[x.index, "Type"] == "DR"].sum()),
+                Transactions=("Amount", "count")
+            )
+            file_summary["Net_Flow"] = file_summary["Total_Credit"] - file_summary["Total_Debit"]
+            
+            file_summary_display = file_summary.copy()
+            for col in ["Total_Credit", "Total_Debit", "Net_Flow"]:
+                file_summary_display[col] = file_summary_display[col].apply(lambda x: format_money(x, currency_symbol))
+            
+            st.dataframe(file_summary_display, use_container_width=True)
+            
+            fig = go.Figure()
+            fig.add_trace(go.Bar(name='Credit', x=file_summary.index, y=file_summary['Total_Credit'], marker_color='#4CAF50'))
+            fig.add_trace(go.Bar(name='Debit', x=file_summary.index, y=file_summary['Total_Debit'], marker_color='#f44336'))
+            fig.update_layout(barmode='group', title="Credit vs Debit by File", xaxis_title="File", yaxis_title=f"Amount ({currency_label})", height=400)
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with tab3:
+            st.markdown("#### Monthly Trends")
+            df["Month"] = df["Date"].dt.to_period("M")
+            monthly_summary = df.groupby(["Month", "Type"])["Amount"].sum().unstack(fill_value=0)
+            monthly_summary["Net"] = monthly_summary.get("CR", 0) - monthly_summary.get("DR", 0)
+            
+            monthly_display = monthly_summary.copy()
+            monthly_display.index = monthly_display.index.astype(str)
+            for col in monthly_display.columns:
+                monthly_display[col] = monthly_display[col].apply(lambda x: format_money(x, currency_symbol))
+            st.dataframe(monthly_display, use_container_width=True)
+            
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=[str(idx) for idx in monthly_summary.index], y=monthly_summary.get("CR", [0]*len(monthly_summary)), name='Credit', line=dict(color='#4CAF50', width=3), mode='lines+markers'))
+            fig.add_trace(go.Scatter(x=[str(idx) for idx in monthly_summary.index], y=monthly_summary.get("DR", [0]*len(monthly_summary)), name='Debit', line=dict(color='#f44336', width=3), mode='lines+markers'))
+            fig.update_layout(title="Monthly Credit & Debit Trends", xaxis_title="Month", yaxis_title=f"Amount ({currency_label})", height=400, hovermode='x unified')
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with tab4:
+            st.markdown("#### Spending by Category")
+            category_summary = df.groupby("Category").agg(Total=("Amount", "sum"), Count=("Amount", "count")).sort_values("Total", ascending=False)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                fig = px.pie(values=category_summary["Total"], names=category_summary.index, title="Spending Distribution by Category", hole=0.4)
+                fig.update_traces(textposition='inside', textinfo='percent+label')
+                st.plotly_chart(fig, use_container_width=True)
+            with col2:
+                fig = px.bar(category_summary.reset_index(), x="Category", y="Total", title="Total Amount by Category", color="Total", color_continuous_scale="Viridis")
+                fig.update_layout(xaxis_tickangle=-45, height=400)
+                st.plotly_chart(fig, use_container_width=True)
+            
+            st.markdown("##### Category Details")
+            category_display = category_summary.copy()
+            category_display["Total"] = category_display["Total"].apply(lambda x: format_money(x, currency_symbol))
+            category_display["Avg_Per_Transaction"] = (category_summary["Total"] / category_summary["Count"]).apply(lambda x: format_money(x, currency_symbol))
+            st.dataframe(category_display, use_container_width=True)
+        
+        with tab5:
+            st.markdown("#### Top 5 Largest Transactions")
+            top5 = df.nlargest(5, "Amount")
+            
+            for idx, row in top5.iterrows():
+                bg_color = "rgba(76, 175, 80, 0.1)" if row['Type'] == "CR" else "rgba(244, 67, 54, 0.1)"
+                border_color = "#4CAF50" if row['Type'] == "CR" else "#f44336"
+                
+                st.markdown(f"""
+                <div style='background-color: {bg_color}; border-left: 4px solid {border_color}; border-radius: 8px; padding: 16px; margin-bottom: 12px;'>
+                    <div style='display: flex; justify-content: space-between; align-items: center;'>
+                        <div style='flex: 1;'>
+                            <div style='font-size: 14px; color: #888; margin-bottom: 4px;'>{row['Date'].strftime('%d %B %Y') if not pd.isna(row['Date']) else ''}</div>
+                            <div style='font-size: 18px; font-weight: 600; margin-bottom: 8px;'>{"🟢" if row['Type'] == "CR" else "🔴"} {format_money(row['Amount'], currency_symbol)}</div>
+                            <div style='font-size: 12px; background: rgba(0,0,0,0.1); display: inline-block; padding: 4px 8px; border-radius: 4px; margin-bottom: 8px;'>{row['Category']}</div>
+                            <div style='font-size: 14px; color: #666; margin-top: 8px;'>{row['Remarks']}</div>
+                        </div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        st.markdown("---")
+        
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.download_button(
+                label="⬇️ Download Complete Analysis (CSV)",
+                data=df.to_csv(index=False).encode("utf-8"),
+                file_name=f"bank_analysis_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                use_container_width=True,
+                key="cached_download"
+            ) 
